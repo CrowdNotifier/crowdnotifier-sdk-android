@@ -1,2 +1,3 @@
+include ':n2step-sdk'
 include ':app'
 rootProject.name = "SDK-Test-App"
