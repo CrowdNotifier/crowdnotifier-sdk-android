@@ -9,6 +9,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import ch.ubique.n2step.sdk.N2STEP;
 import ch.ubique.n2step.sdk_test_app.R;
 
 public class MainFragment extends Fragment {
@@ -23,6 +24,7 @@ public class MainFragment extends Fragment {
 	@Override
 	public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
 			@Nullable Bundle savedInstanceState) {
+		N2STEP.cleanupOldData(14);
 		return inflater.inflate(R.layout.main_fragment, container, false);
 	}
 
