@@ -3,7 +3,7 @@ package ch.ubique.n2step.sdk_test_app;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 
-import ch.ubique.n2step.sdk_test_app.ui.main.MainFragment;
+import ch.ubique.n2step.sdk_test_app.test.MainFragment;
 
 public class MainActivity extends AppCompatActivity {
 

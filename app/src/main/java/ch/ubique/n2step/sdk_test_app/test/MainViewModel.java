@@ -1,4 +1,4 @@
-package ch.ubique.n2step.sdk_test_app.ui.main;
+package ch.ubique.n2step.sdk_test_app.test;
 
 import androidx.lifecycle.ViewModel;
 
