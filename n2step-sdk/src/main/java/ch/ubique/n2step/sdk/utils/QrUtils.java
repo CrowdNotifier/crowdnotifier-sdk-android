@@ -11,7 +11,7 @@ import static android.util.Base64.NO_PADDING;
 
 public class QrUtils {
 
-	private static final String QR_CODE_PREFIX = "https://qr-dev.n2s.ch/";
+	private static final String QR_CODE_PREFIX = "https://qr-dev.n2s.ch";
 
 	public static VenueInfo getQrInfo(String qrCodeString) {
 
