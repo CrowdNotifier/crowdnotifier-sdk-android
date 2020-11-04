@@ -6,9 +6,10 @@ public class VenueInfo {
 	private String room;
 	private byte[] publicKey;
 	private byte[] notificationKey;
-	private Qr.QRCode.VenueType venueType;
+	private Qr.QRCodeContent.VenueType venueType;
 
-	public VenueInfo(String name, String location, String room, Qr.QRCode.VenueType venueType, byte[] publicKey, byte[] notificationKey) {
+	public VenueInfo(String name, String location, String room, Qr.QRCodeContent.VenueType venueType, byte[] publicKey,
+			byte[] notificationKey) {
 		this.name = name;
 		this.location = location;
 		this.room = room;
@@ -38,7 +39,7 @@ public class VenueInfo {
 		return room;
 	}
 
-	public Qr.QRCode.VenueType getVenueType() {
+	public Qr.QRCodeContent.VenueType getVenueType() {
 		return venueType;
 	}
 

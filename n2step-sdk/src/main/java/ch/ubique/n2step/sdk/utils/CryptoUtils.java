@@ -36,6 +36,11 @@ public class CryptoUtils {
 		return sharedKey;
 	}
 
+	public boolean isSignatureValid(byte[] signature, byte[] message, byte[] publicKey) {
+		int verified = Sodium.crypto_sign_ed25519_verify_detached(signature, message, message.length, publicKey);
+		return verified != -1;
+	}
+
 
 	public byte[] encryptMessage(String payload, byte[] publicKey) {
 		byte[] payloadBytes = payload.getBytes();

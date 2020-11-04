@@ -11,7 +11,7 @@ import static android.util.Base64.NO_PADDING;
 
 public class QrUtils {
 
-	private static final String QR_CODE_PREFIX = "https://qr-dev.n2s.ch";
+	private static final String QR_CODE_PREFIX = "https://qr-dev.n2s.ch/";
 
 	public static VenueInfo getQrInfo(String qrCodeString) {
 
@@ -22,8 +22,14 @@ public class QrUtils {
 		try {
 			int decodeFlags = Base64.NO_WRAP | Base64.URL_SAFE | NO_PADDING;
 			byte[] decoded = Base64.decode(splits[1], decodeFlags);
-			Qr.QRCode qrCode = Qr.QRCode.parseFrom(decoded);
-			//TODO: Check signature of QR Code
+			Qr.QRCodeWrapper qrCodeWrapper = Qr.QRCodeWrapper.parseFrom(decoded);
+			Qr.QRCodeContent qrCode = qrCodeWrapper.getContent();
+
+			boolean validSignature =
+					CryptoUtils.getInstance().isSignatureValid(qrCodeWrapper.getSignature().toByteArray(), qrCode.toByteArray(),
+							qrCode.getPublicKey().toByteArray());
+			if (!validSignature) return null;
+
 			return new VenueInfo(qrCode.getName(), qrCode.getLocation(), qrCode.getRoom(), qrCode.getVenueType(),
 					qrCode.getPublicKey().toByteArray(), qrCode.getNotificationKey().toByteArray());
 		} catch (InvalidProtocolBufferException e) {
