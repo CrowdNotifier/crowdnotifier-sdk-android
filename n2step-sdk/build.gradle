@@ -1,5 +1,7 @@
 plugins {
 	id 'com.android.library'
+	id 'maven-publish'
+	id 'com.jfrog.bintray'
 	id 'org.sonarqube' version '3.0'
 	id 'com.google.protobuf'
 }
@@ -12,11 +14,13 @@ android {
 		minSdkVersion 23
 		targetSdkVersion 30
 		versionCode 1
-		versionName "1.0"
+		versionName "0.1"
 
 		testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 		consumerProguardFiles "consumer-rules.pro"
 	}
+
+	defaultPublishConfig "release"
 
 	buildTypes {
 		release {
@@ -50,6 +54,55 @@ android {
 		}
 	}
 
+}
+
+
+task androidSourcesJar(type: Jar) {
+	archiveClassifier = 'sources'
+	from android.sourceSets.main.java.srcDirs
+}
+afterEvaluate {
+	publishing {
+		publications {
+			"sdkRelease"(MavenPublication) {
+				from components.release
+				groupId 'ch.ubique.n2step'
+				artifactId 'n2step-sdk-android'
+				version android.defaultConfig.versionName + readPropertyWithDefault('bintrayVersionSuffix', '')
+				artifact androidSourcesJar
+			}
+		}
+	}
+}
+
+ext.readProperty = { paramName -> readPropertyWithDefault(paramName, null) }
+ext.readPropertyWithDefault = { paramName, defaultValue ->
+	if (project.hasProperty(paramName)) {
+		return project.getProperties().get(paramName)
+	} else {
+		Properties properties = new Properties()
+		if (project.rootProject.file('local.properties').exists()) {
+			properties.load(project.rootProject.file('local.properties').newDataInputStream())
+		}
+		if (properties.getProperty(paramName) != null) {
+			return properties.getProperty(paramName)
+		} else {
+			return defaultValue
+		}
+	}
+}
+
+bintray {
+	user = readProperty('bintrayUser')
+	key = readProperty('bintrayApikey')
+	publications = ['sdkRelease']
+	publish = true
+	pkg {
+		repo = 'n2step-sdk-android'
+		name = 'n2step-sdk-android'
+		userOrg = 'n2step'
+		licenses = ['MPL-2.0']
+	}
 }
 
 sonarqube {
