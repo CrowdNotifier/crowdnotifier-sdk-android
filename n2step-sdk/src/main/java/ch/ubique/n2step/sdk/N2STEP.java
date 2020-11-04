@@ -4,10 +4,14 @@ import android.content.Context;
 
 import java.util.List;
 
+import com.google.gson.Gson;
+
 import ch.ubique.n2step.sdk.model.Exposure;
+import ch.ubique.n2step.sdk.model.Payload;
 import ch.ubique.n2step.sdk.model.ProblematicEventInfo;
 import ch.ubique.n2step.sdk.model.VenueInfo;
 import ch.ubique.n2step.sdk.storage.VenueVisitStorage;
+import ch.ubique.n2step.sdk.utils.CryptoUtils;
 import ch.ubique.n2step.sdk.utils.QrUtils;
 
 public class N2STEP {
@@ -20,38 +24,20 @@ public class N2STEP {
 		return QrUtils.getQrInfo(qrCodeData);
 	}
 
-	/**
-	 * @param venueInfo
-	 * @return An ID
-	 */
-	public static long checkIn(VenueInfo venueInfo, Context context) {
 
-		//TODO implement
-		/*
-		Compute a Diffie-Hellman key exchange:
-		1. Get the venue public key from the QR Code -> pkV
-		2. Pick a random private key r (mod p)
-		3. Compute public key g^r
-		4. Compute shared key pkV^r
-		5. Store public key g^r, and shared key pkV^r together with Enc(pkV, arrival_time || notification_key)
-		6. Return an ID which identifies this DB entry
-		 */
+	public static long addVenueVisit(long arrivalTime, long departureTime, byte[] notificationKey, byte[] venuePublicKey,
+			Context context) {
 
-		return VenueVisitStorage.getInstance(context).addCheckIn(1000, venueInfo.getPublicKey(), null, null, null);
-	}
+		CryptoUtils crypto = CryptoUtils.getInstance();
 
-	public static void changeDuration(String publicKey, long checkinId, long duration, Context context) {
+		byte[] ephemeralSecretKey = crypto.getRandomEphemeralSecretKey();
+		byte[] ephemeralPublicKey = crypto.computeEphemeralPublicKey(ephemeralSecretKey);
+		byte[] sharedKey = crypto.computeSharedKey(venuePublicKey, ephemeralSecretKey);
 
-		//TODO implement
-		/*
-		Compute a Diffie-Hellman key exchange:
-		1. Get the venue public key from the QR Code -> pkV
-		2. Pick a random private key r (mod p)
-		3. Compute public key g^r
-		4. Compute shared key pkV^r
-		5. Replace entry of checkinId with Enc(pkV, departure_time)
-		 */
-		VenueVisitStorage.getInstance(context).changeCheckOut(checkinId, null);
+		String payload = new Gson().toJson(new Payload(arrivalTime, departureTime, notificationKey));
+		byte[] encryptedPayload = crypto.encryptMessage(payload, venuePublicKey);
+
+		return VenueVisitStorage.getInstance(context).addEntry(arrivalTime, ephemeralPublicKey, sharedKey, encryptedPayload);
 	}
 
 	public static List<Exposure> checkForMatches(List<ProblematicEventInfo> problematicEventInfos) {

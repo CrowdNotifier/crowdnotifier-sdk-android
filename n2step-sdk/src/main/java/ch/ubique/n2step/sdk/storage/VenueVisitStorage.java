@@ -35,28 +35,14 @@ public class VenueVisitStorage {
 		return instance;
 	}
 
-	public long addCheckIn(long dayTimestamp, byte[] publicKey, byte[] sharedKey,
-			byte[] encryptedArrivalAndNotificationKey, byte[] encryptedCheckout) {
+	public long addEntry(long dayTimestamp, byte[] publicKey, byte[] sharedKey, byte[] encryptedPayload) {
 		long newId = getMaxId() + 1;
-		EncryptedVenueVisit newVenueVisit = new EncryptedVenueVisit(newId, dayTimestamp, publicKey, sharedKey,
-				encryptedArrivalAndNotificationKey, encryptedCheckout);
+		EncryptedVenueVisit newVenueVisit = new EncryptedVenueVisit(newId, dayTimestamp, publicKey, sharedKey, encryptedPayload);
 		venueVisitList.add(newVenueVisit);
 		saveToPrefs();
 		return newId;
 	}
 
-	public void changeCheckOut(long id, byte[] encryptedCheckout) {
-		EncryptedVenueVisit venueVisit = getVenueVisitWithId(id);
-		if (venueVisit == null) {
-			throw new IllegalArgumentException("There is no visit with id: " + id);
-		}
-		venueVisit.setEncryptedCheckout(encryptedCheckout);
-		saveToPrefs();
-	}
-
-	public ArrayList<EncryptedVenueVisit> getVenueVisitList() {
-		return venueVisitList;
-	}
 
 	private long getMaxId() {
 		long maxId = 0;

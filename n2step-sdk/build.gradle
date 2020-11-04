@@ -124,6 +124,7 @@ dependencies {
 	implementation 'com.google.protobuf:protobuf-lite:3.0.1'
 	implementation "com.goterl.lazycode:lazysodium-android:4.2.0@aar"
 	implementation 'net.java.dev.jna:jna:5.5.0@aar'
+	implementation 'com.github.joshjdevl.libsodiumjni:libsodium-jni-aar:2.0.1'
 
 
 }

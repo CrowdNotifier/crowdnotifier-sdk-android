@@ -5,17 +5,15 @@ public class EncryptedVenueVisit {
 	private long dayTimestamp;
 	private byte[] publicKey;
 	private byte[] sharedKey;
-	private byte[] encryptedArrivalAndNotificationKey;
-	private byte[] encryptedCheckout;
+	private byte[] encryptedPayload;
 
 	public EncryptedVenueVisit(long id, long dayTimestamp, byte[] publicKey, byte[] sharedKey,
-			byte[] encryptedArrivalAndNotificationKey, byte[] encryptedCheckout) {
+			byte[] encryptedPayload) {
 		this.id = id;
 		this.dayTimestamp = dayTimestamp;
 		this.publicKey = publicKey;
 		this.sharedKey = sharedKey;
-		this.encryptedArrivalAndNotificationKey = encryptedArrivalAndNotificationKey;
-		this.encryptedCheckout = encryptedCheckout;
+		this.encryptedPayload = encryptedPayload;
 	}
 
 	public long getId() {
@@ -34,16 +32,8 @@ public class EncryptedVenueVisit {
 		return sharedKey;
 	}
 
-	public byte[] getEncryptedArrivalAndNotificationKey() {
-		return encryptedArrivalAndNotificationKey;
-	}
-
-	public byte[] getEncryptedCheckout() {
-		return encryptedCheckout;
-	}
-
-	public void setEncryptedCheckout(byte[] encryptedCheckout) {
-		this.encryptedCheckout = encryptedCheckout;
+	public byte[] getEncryptedPayload() {
+		return encryptedPayload;
 	}
 
 }

@@ -7,6 +7,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import ch.ubique.n2step.sdk.model.VenueInfo;
 import ch.ubique.n2step.sdk.model.Qr;
 
+import static android.util.Base64.NO_PADDING;
+
 public class QrUtils {
 
 	private static final String QR_CODE_PREFIX = "https://qr-dev.n2s.ch";
@@ -18,7 +20,7 @@ public class QrUtils {
 		if (!splits[0].equals(QR_CODE_PREFIX)) return null;
 
 		try {
-			int decodeFlags = Base64.NO_WRAP | Base64.URL_SAFE;
+			int decodeFlags = Base64.NO_WRAP | Base64.URL_SAFE | NO_PADDING;
 			byte[] decoded = Base64.decode(splits[1], decodeFlags);
 			Qr.QRCode qrCode = Qr.QRCode.parseFrom(decoded);
 			//TODO: Check signature of QR Code
