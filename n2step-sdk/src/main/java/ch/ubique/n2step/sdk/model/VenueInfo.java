@@ -3,14 +3,16 @@ package ch.ubique.n2step.sdk.model;
 public class VenueInfo {
 	private String name;
 	private String location;
-	private long defaultDuration;
-	private String publicKey;
-	private String notificationKey;
+	private String room;
+	private byte[] publicKey;
+	private byte[] notificationKey;
+	private Qr.QRCode.VenueType venueType;
 
-	public VenueInfo(String name, String location, long defaultDuration, String publicKey, String notificationKey) {
+	public VenueInfo(String name, String location, String room, Qr.QRCode.VenueType venueType, byte[] publicKey, byte[] notificationKey) {
 		this.name = name;
 		this.location = location;
-		this.defaultDuration = defaultDuration;
+		this.room = room;
+		this.venueType = venueType;
 		this.publicKey = publicKey;
 		this.notificationKey = notificationKey;
 	}
@@ -23,16 +25,21 @@ public class VenueInfo {
 		return location;
 	}
 
-	public long getDefaultDuration() {
-		return defaultDuration;
-	}
 
-	public String getPublicKey() {
+	public byte[] getPublicKey() {
 		return publicKey;
 	}
 
-	public String getNotificationKey() {
+	public byte[] getNotificationKey() {
 		return notificationKey;
+	}
+
+	public String getRoom() {
+		return room;
+	}
+
+	public Qr.QRCode.VenueType getVenueType() {
+		return venueType;
 	}
 
 }
