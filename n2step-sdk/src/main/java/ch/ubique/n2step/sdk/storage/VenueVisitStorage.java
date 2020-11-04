@@ -35,8 +35,8 @@ public class VenueVisitStorage {
 		return instance;
 	}
 
-	public long addCheckIn(long dayTimestamp, String publicKey, String sharedKey,
-			String encryptedArrivalAndNotificationKey, String encryptedCheckout) {
+	public long addCheckIn(long dayTimestamp, byte[] publicKey, byte[] sharedKey,
+			byte[] encryptedArrivalAndNotificationKey, byte[] encryptedCheckout) {
 		long newId = getMaxId() + 1;
 		EncryptedVenueVisit newVenueVisit = new EncryptedVenueVisit(newId, dayTimestamp, publicKey, sharedKey,
 				encryptedArrivalAndNotificationKey, encryptedCheckout);
@@ -45,7 +45,7 @@ public class VenueVisitStorage {
 		return newId;
 	}
 
-	public void changeCheckOut(long id, String encryptedCheckout) {
+	public void changeCheckOut(long id, byte[] encryptedCheckout) {
 		EncryptedVenueVisit venueVisit = getVenueVisitWithId(id);
 		if (venueVisit == null) {
 			throw new IllegalArgumentException("There is no visit with id: " + id);

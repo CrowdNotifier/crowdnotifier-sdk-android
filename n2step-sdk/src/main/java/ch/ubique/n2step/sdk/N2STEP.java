@@ -8,6 +8,7 @@ import ch.ubique.n2step.sdk.model.Exposure;
 import ch.ubique.n2step.sdk.model.ProblematicEventInfo;
 import ch.ubique.n2step.sdk.model.VenueInfo;
 import ch.ubique.n2step.sdk.storage.VenueVisitStorage;
+import ch.ubique.n2step.sdk.utils.QrUtils;
 
 public class N2STEP {
 
@@ -16,8 +17,7 @@ public class N2STEP {
 	 * @return A {@link VenueInfo} if the input qrCodeData was a valid qrCode, null otherwise.
 	 */
 	public static VenueInfo getInfo(String qrCodeData) {
-		//TODO parse qrCodeData and return VenueInfo if qrCodeData is of a valid format
-		return new VenueInfo("Test-Venue", "Test-Location", 5000, "publicKey", "notificationKey");
+		return QrUtils.getQrInfo(qrCodeData);
 	}
 
 	/**
@@ -37,7 +37,7 @@ public class N2STEP {
 		6. Return an ID which identifies this DB entry
 		 */
 
-		return VenueVisitStorage.getInstance(context).addCheckIn(1000, venueInfo.getPublicKey(), "TODO", "TODO", "TODO");
+		return VenueVisitStorage.getInstance(context).addCheckIn(1000, venueInfo.getPublicKey(), null, null, null);
 	}
 
 	public static void changeDuration(String publicKey, long checkinId, long duration, Context context) {
@@ -51,7 +51,7 @@ public class N2STEP {
 		4. Compute shared key pkV^r
 		5. Replace entry of checkinId with Enc(pkV, departure_time)
 		 */
-		VenueVisitStorage.getInstance(context).changeCheckOut(checkinId, "TODO");
+		VenueVisitStorage.getInstance(context).changeCheckOut(checkinId, null);
 	}
 
 	public static List<Exposure> checkForMatches(List<ProblematicEventInfo> problematicEventInfos) {

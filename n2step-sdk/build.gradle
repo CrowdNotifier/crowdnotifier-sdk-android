@@ -1,5 +1,6 @@
 plugins {
 	id 'com.android.library'
+	id 'com.google.protobuf'
 }
 
 android {
@@ -26,6 +27,28 @@ android {
 		sourceCompatibility JavaVersion.VERSION_1_8
 		targetCompatibility JavaVersion.VERSION_1_8
 	}
+
+	protobuf {
+		protoc {
+			artifact = 'com.google.protobuf:protoc:3.0.0'
+		}
+		plugins {
+			javalite {
+				artifact = 'com.google.protobuf:protoc-gen-javalite:3.0.0'
+			}
+		}
+		generateProtoTasks {
+			all().each { task ->
+				task.builtins {
+					remove java
+				}
+				task.plugins {
+					javalite {}
+				}
+			}
+		}
+	}
+
 }
 
 dependencies {
@@ -36,4 +59,9 @@ dependencies {
 	androidTestImplementation 'androidx.test.ext:junit:1.1.2'
 	androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
 	implementation 'com.google.code.gson:gson:2.8.6'
+	implementation 'com.google.protobuf:protobuf-lite:3.0.1'
+	implementation "com.goterl.lazycode:lazysodium-android:4.2.0@aar"
+	implementation 'net.java.dev.jna:jna:5.5.0@aar'
+
+
 }
