@@ -2,7 +2,6 @@ package ch.ubique.n2step.sdk;
 
 import android.content.Context;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import ch.ubique.n2step.sdk.model.EncryptedVenueVisit;
@@ -10,6 +9,7 @@ import ch.ubique.n2step.sdk.model.Exposure;
 import ch.ubique.n2step.sdk.model.Payload;
 import ch.ubique.n2step.sdk.model.ProblematicEventInfo;
 import ch.ubique.n2step.sdk.model.VenueInfo;
+import ch.ubique.n2step.sdk.storage.ExposureStorage;
 import ch.ubique.n2step.sdk.storage.VenueVisitStorage;
 import ch.ubique.n2step.sdk.utils.CryptoUtils;
 import ch.ubique.n2step.sdk.utils.QrUtils;
@@ -37,7 +37,7 @@ public class N2STEP {
 
 	public static List<Exposure> checkForMatches(List<ProblematicEventInfo> problematicEventInfos, Context context) {
 
-		List<Exposure> result = new ArrayList<>();
+		ExposureStorage exposureStorage = ExposureStorage.getInstance(context);
 
 		for (ProblematicEventInfo problematicEventInfo : problematicEventInfos) {
 
@@ -52,17 +52,25 @@ public class N2STEP {
 						|| (match.getArrivalTime() <= problematicEventInfo.getEndTimestamp() &&
 						match.getDepartureTime() >= problematicEventInfo.getStartTimestamp())) {
 
-					result.add(new Exposure(0, Math.max(match.getArrivalTime(), problematicEventInfo.getStartTimestamp()),
-							Math.min(match.getDepartureTime(), problematicEventInfo.getEndTimestamp())));
+					exposureStorage.addEntry(
+							new Exposure(0,
+									Math.max(match.getArrivalTime(), problematicEventInfo.getStartTimestamp()),
+									Math.min(match.getDepartureTime(), problematicEventInfo.getEndTimestamp())
+							));
 				}
 			}
 		}
 
-		return result;
+		return exposureStorage.getEntries();
 	}
 
-	public static void cleanupOldData(int maxDaysToKeep) {
-		//TODO implement
+	public static List<Exposure> getExposures(Context context) {
+		return ExposureStorage.getInstance(context).getEntries();
+	}
+
+	public static void cleanupOldData(Context context, int maxDaysToKeep) {
+		VenueVisitStorage.getInstance(context).removeEntriesBefore(maxDaysToKeep);
+		ExposureStorage.getInstance(context).removeEntriesBefore(maxDaysToKeep);
 	}
 
 }

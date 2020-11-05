@@ -23,4 +23,8 @@ public class Exposure {
 		return endTimestamp;
 	}
 
+	public void setId(long id) {
+		this.id = id;
+	}
+
 }

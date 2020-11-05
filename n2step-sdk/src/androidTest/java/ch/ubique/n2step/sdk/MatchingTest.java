@@ -13,6 +13,7 @@ import org.junit.runner.RunWith;
 
 import ch.ubique.n2step.sdk.model.Exposure;
 import ch.ubique.n2step.sdk.model.ProblematicEventInfo;
+import ch.ubique.n2step.sdk.storage.ExposureStorage;
 import ch.ubique.n2step.sdk.storage.VenueVisitStorage;
 import ch.ubique.n2step.sdk.utils.Base64Util;
 
@@ -28,6 +29,7 @@ public class MatchingTest {
 		context = InstrumentationRegistry.getInstrumentation().getTargetContext();
 
 		VenueVisitStorage.getInstance(context).clear();
+		ExposureStorage.getInstance(context).clear();
 	}
 
 	@Test
