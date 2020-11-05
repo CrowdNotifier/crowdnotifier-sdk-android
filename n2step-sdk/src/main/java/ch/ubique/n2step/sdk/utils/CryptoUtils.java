@@ -9,6 +9,7 @@ import com.google.gson.Gson;
 import org.libsodium.jni.NaCl;
 import org.libsodium.jni.Sodium;
 
+import ch.ubique.n2step.sdk.model.DayDate;
 import ch.ubique.n2step.sdk.model.EncryptedVenueVisit;
 import ch.ubique.n2step.sdk.model.Payload;
 
@@ -51,7 +52,7 @@ public class CryptoUtils {
 		byte[] encryptedPayload = new byte[payloadBytes.length + Sodium.crypto_box_sealbytes()];
 		Sodium.crypto_box_seal(encryptedPayload, payloadBytes, payloadBytes.length, pk_venue_kx);
 
-		return new EncryptedVenueVisit(0, arrivalTime, ephemeralPublicKey, tag, encryptedPayload);
+		return new EncryptedVenueVisit(0, new DayDate(departureTime), ephemeralPublicKey, tag, encryptedPayload);
 	}
 
 	public List<Payload> searchAndDecryptMatches(byte[] sk_venue_sgn, List<EncryptedVenueVisit> venueVisits) {
