@@ -1,19 +1,18 @@
 package ch.ubique.n2step.sdk.model;
 
 public class ProblematicEventInfo {
-	private String secretKey;
+
+	private byte[] secretKey;
 	private long startTimestamp;
 	private long endTimestamp;
-	private String encryptedMessage;
 
-	public ProblematicEventInfo(String secretKey, long startTimestamp, long endTimestamp, String encryptedMessage) {
+	public ProblematicEventInfo(byte[] secretKey, long startTimestamp, long endTimestamp) {
 		this.secretKey = secretKey;
 		this.startTimestamp = startTimestamp;
 		this.endTimestamp = endTimestamp;
-		this.encryptedMessage = encryptedMessage;
 	}
 
-	public String getSecretKey() {
+	public byte[] getSecretKey() {
 		return secretKey;
 	}
 
@@ -23,10 +22,6 @@ public class ProblematicEventInfo {
 
 	public long getEndTimestamp() {
 		return endTimestamp;
-	}
-
-	public String getEncryptedMessage() {
-		return encryptedMessage;
 	}
 
 }

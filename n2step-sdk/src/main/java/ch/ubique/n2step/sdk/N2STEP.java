@@ -2,10 +2,10 @@ package ch.ubique.n2step.sdk;
 
 import android.content.Context;
 
+import java.util.ArrayList;
 import java.util.List;
 
-import com.google.gson.Gson;
-
+import ch.ubique.n2step.sdk.model.EncryptedVenueVisit;
 import ch.ubique.n2step.sdk.model.Exposure;
 import ch.ubique.n2step.sdk.model.Payload;
 import ch.ubique.n2step.sdk.model.ProblematicEventInfo;
@@ -29,27 +29,36 @@ public class N2STEP {
 			Context context) {
 
 		CryptoUtils crypto = CryptoUtils.getInstance();
+		EncryptedVenueVisit encryptedVenueVisit =
+				crypto.getEncryptedVenueVisit(arrivalTime, departureTime, notificationKey, venuePublicKey);
 
-		byte[] ephemeralSecretKey = crypto.getRandomEphemeralSecretKey();
-		byte[] ephemeralPublicKey = crypto.computeEphemeralPublicKey(ephemeralSecretKey);
-		byte[] sharedKey = crypto.computeSharedKey(venuePublicKey, ephemeralSecretKey);
-
-		String payload = new Gson().toJson(new Payload(arrivalTime, departureTime, notificationKey));
-		byte[] encryptedPayload = crypto.encryptMessage(payload, venuePublicKey);
-
-		return VenueVisitStorage.getInstance(context).addEntry(arrivalTime, ephemeralPublicKey, sharedKey, encryptedPayload);
+		return VenueVisitStorage.getInstance(context).addEntry(encryptedVenueVisit);
 	}
 
-	public static List<Exposure> checkForMatches(List<ProblematicEventInfo> problematicEventInfos) {
-		//TODO implement
-		/*
-		1. Go through all check ins overlapping with the problematicEvent duration and check if our public key to the power of
-		the published secret key is equals the shared key (pk^skV == sharedKey)
-		2. If so, decrypt the check-in and check-out DB entry, use the notification_key to decrypt the message and create an
-		Exposure
-		object and add it to the return list.
-		 */
-		return null;
+	public static List<Exposure> checkForMatches(List<ProblematicEventInfo> problematicEventInfos, Context context) {
+
+		List<Exposure> result = new ArrayList<>();
+
+		for (ProblematicEventInfo problematicEventInfo : problematicEventInfos) {
+
+			List<Payload> matches = CryptoUtils.getInstance().searchAndDecryptMatches(
+					problematicEventInfo.getSecretKey(),
+					VenueVisitStorage.getInstance(context).getEntries()
+			);
+
+			for (Payload match : matches) {
+				if ((match.getArrivalTime() <= problematicEventInfo.getEndTimestamp() &&
+						match.getDepartureTime() >= problematicEventInfo.getStartTimestamp())
+						|| (match.getArrivalTime() <= problematicEventInfo.getEndTimestamp() &&
+						match.getDepartureTime() >= problematicEventInfo.getStartTimestamp())) {
+
+					result.add(new Exposure(0, Math.max(match.getArrivalTime(), problematicEventInfo.getStartTimestamp()),
+							Math.min(match.getDepartureTime(), problematicEventInfo.getEndTimestamp())));
+				}
+			}
+		}
+
+		return result;
 	}
 
 	public static void cleanupOldData(int maxDaysToKeep) {

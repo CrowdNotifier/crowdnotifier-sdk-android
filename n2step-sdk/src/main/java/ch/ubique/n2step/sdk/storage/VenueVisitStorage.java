@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.List;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -35,12 +36,16 @@ public class VenueVisitStorage {
 		return instance;
 	}
 
-	public long addEntry(long dayTimestamp, byte[] publicKey, byte[] sharedKey, byte[] encryptedPayload) {
+	public long addEntry(EncryptedVenueVisit newVenueVisit) {
 		long newId = getMaxId() + 1;
-		EncryptedVenueVisit newVenueVisit = new EncryptedVenueVisit(newId, dayTimestamp, publicKey, sharedKey, encryptedPayload);
+		newVenueVisit.setId(newId);
 		venueVisitList.add(newVenueVisit);
 		saveToPrefs();
 		return newId;
+	}
+
+	public List<EncryptedVenueVisit> getEntries() {
+		return venueVisitList;
 	}
 
 
@@ -65,6 +70,11 @@ public class VenueVisitStorage {
 
 	private void saveToPrefs() {
 		sharedPreferences.edit().putString(KEY_VENUE_VISITS, gson.toJson(venueVisitList)).apply();
+	}
+
+	public void clear() {
+		venueVisitList = new ArrayList<>();
+		saveToPrefs();
 	}
 
 }

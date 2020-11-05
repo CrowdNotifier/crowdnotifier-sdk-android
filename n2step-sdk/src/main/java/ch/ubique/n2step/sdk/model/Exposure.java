@@ -4,13 +4,11 @@ public class Exposure {
 	private long id;
 	private long startTimestamp;
 	private long endTimestamp;
-	private String message;
 
-	public Exposure(long id, long startTime, long endTime, String message) {
+	public Exposure(long id, long startTime, long endTime) {
 		this.id = id;
 		this.startTimestamp = startTime;
 		this.endTimestamp = endTime;
-		this.message = message;
 	}
 
 	public long getId() {
@@ -23,10 +21,6 @@ public class Exposure {
 
 	public long getEndTime() {
 		return endTimestamp;
-	}
-
-	public String getMessage() {
-		return message;
 	}
 
 }
