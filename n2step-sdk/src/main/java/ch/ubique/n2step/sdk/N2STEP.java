@@ -2,6 +2,7 @@ package ch.ubique.n2step.sdk;
 
 import android.content.Context;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import ch.ubique.n2step.sdk.model.EncryptedVenueVisit;
@@ -37,7 +38,7 @@ public class N2STEP {
 
 	public static List<Exposure> checkForMatches(List<ProblematicEventInfo> problematicEventInfos, Context context) {
 
-		ExposureStorage exposureStorage = ExposureStorage.getInstance(context);
+		ArrayList<Exposure> newExposures = new ArrayList<>();
 
 		for (ProblematicEventInfo problematicEventInfo : problematicEventInfos) {
 
@@ -47,21 +48,22 @@ public class N2STEP {
 			);
 
 			for (Payload match : matches) {
-				if ((match.getArrivalTime() <= problematicEventInfo.getEndTimestamp() &&
-						match.getDepartureTime() >= problematicEventInfo.getStartTimestamp())
-						|| (match.getArrivalTime() <= problematicEventInfo.getEndTimestamp() &&
-						match.getDepartureTime() >= problematicEventInfo.getStartTimestamp())) {
-
-					exposureStorage.addEntry(
-							new Exposure(0,
-									Math.max(match.getArrivalTime(), problematicEventInfo.getStartTimestamp()),
-									Math.min(match.getDepartureTime(), problematicEventInfo.getEndTimestamp())
-							));
+				if (match.getArrivalTime() <= problematicEventInfo.getEndTimestamp() &&
+						match.getDepartureTime() >= problematicEventInfo.getStartTimestamp()) {
+					newExposures.add(new Exposure(0,
+							Math.max(match.getArrivalTime(), problematicEventInfo.getStartTimestamp()),
+							Math.min(match.getDepartureTime(), problematicEventInfo.getEndTimestamp())
+					));
 				}
 			}
 		}
 
-		return exposureStorage.getEntries();
+		if (!newExposures.isEmpty()) {
+			ExposureStorage exposureStorage = ExposureStorage.getInstance(context);
+			exposureStorage.addEntries(newExposures);
+		}
+
+		return newExposures;
 	}
 
 	public static List<Exposure> getExposures(Context context) {

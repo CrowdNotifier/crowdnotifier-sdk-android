@@ -49,6 +49,12 @@ public class ExposureStorage {
 		return instance;
 	}
 
+	public void addEntries(List<Exposure> exposures) {
+		for (Exposure exposure : exposures) {
+			addEntry(exposure);
+		}
+	}
+
 	public long addEntry(Exposure exposure) {
 		List<Exposure> exposureList = getEntries();
 		long newId = getMaxId(exposureList) + 1;
