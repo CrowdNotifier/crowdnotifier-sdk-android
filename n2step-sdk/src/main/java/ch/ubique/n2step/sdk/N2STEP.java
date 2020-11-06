@@ -39,30 +39,26 @@ public class N2STEP {
 	public static List<Exposure> checkForMatches(List<ProblematicEventInfo> problematicEventInfos, Context context) {
 
 		ArrayList<Exposure> newExposures = new ArrayList<>();
+		ExposureStorage exposureStorage = ExposureStorage.getInstance(context);
 
 		for (ProblematicEventInfo problematicEventInfo : problematicEventInfos) {
 
-			List<Payload> matches = CryptoUtils.getInstance().searchAndDecryptMatches(
+			List<Exposure> matches = CryptoUtils.getInstance().searchAndDecryptMatches(
 					problematicEventInfo.getSecretKey(),
 					VenueVisitStorage.getInstance(context).getEntries()
 			);
 
-			for (Payload match : matches) {
-				if (match.getArrivalTime() <= problematicEventInfo.getEndTimestamp() &&
-						match.getDepartureTime() >= problematicEventInfo.getStartTimestamp()) {
-					newExposures.add(new Exposure(0,
-							Math.max(match.getArrivalTime(), problematicEventInfo.getStartTimestamp()),
-							Math.min(match.getDepartureTime(), problematicEventInfo.getEndTimestamp())
-					));
+			for (Exposure match : matches) {
+				if (match.getStartTime() <= problematicEventInfo.getEndTimestamp() &&
+						match.getEndTime() >= problematicEventInfo.getStartTimestamp()) {
+					Exposure newExposure = new Exposure(match.getId(),
+							Math.max(match.getStartTime(), problematicEventInfo.getStartTimestamp()),
+							Math.min(match.getEndTime(), problematicEventInfo.getEndTimestamp()));
+					boolean added = exposureStorage.addEntry(newExposure);
+					if (added) newExposures.add(newExposure);
 				}
 			}
 		}
-
-		if (!newExposures.isEmpty()) {
-			ExposureStorage exposureStorage = ExposureStorage.getInstance(context);
-			exposureStorage.addEntries(newExposures);
-		}
-
 		return newExposures;
 	}
 

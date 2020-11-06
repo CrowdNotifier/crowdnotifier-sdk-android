@@ -11,6 +11,7 @@ import org.libsodium.jni.Sodium;
 
 import ch.ubique.n2step.sdk.model.DayDate;
 import ch.ubique.n2step.sdk.model.EncryptedVenueVisit;
+import ch.ubique.n2step.sdk.model.Exposure;
 import ch.ubique.n2step.sdk.model.Payload;
 
 public class CryptoUtils {
@@ -67,9 +68,9 @@ public class CryptoUtils {
 		return new EncryptedVenueVisit(0, new DayDate(departureTime), ephemeralPublicKey, tag, encryptedPayload);
 	}
 
-	public List<Payload> searchAndDecryptMatches(byte[] sk_venue_sgn, List<EncryptedVenueVisit> venueVisits) {
+	public List<Exposure> searchAndDecryptMatches(byte[] sk_venue_sgn, List<EncryptedVenueVisit> venueVisits) {
 
-		List<Payload> result = new ArrayList<>();
+		List<Exposure> result = new ArrayList<>();
 
 		byte[] sk_venue_kx = new byte[Sodium.crypto_box_secretkeybytes()];
 		int r = Sodium.crypto_sign_ed25519_sk_to_curve25519(sk_venue_kx, sk_venue_sgn);
@@ -102,7 +103,8 @@ public class CryptoUtils {
 				}
 
 				Payload payload = new Gson().fromJson(new String(decriptedPayloadBytes), Payload.class);
-				result.add(payload);
+				Exposure exposure = new Exposure(venueVisit.getId(), payload.getArrivalTime(), payload.getDepartureTime());
+				result.add(exposure);
 			}
 		}
 

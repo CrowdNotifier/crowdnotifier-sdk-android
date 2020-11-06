@@ -49,29 +49,16 @@ public class ExposureStorage {
 		return instance;
 	}
 
-	public void addEntries(List<Exposure> exposures) {
-		for (Exposure exposure : exposures) {
-			addEntry(exposure);
-		}
-	}
-
-	public long addEntry(Exposure exposure) {
+	public boolean addEntry(Exposure exposure) {
 		List<Exposure> exposureList = getEntries();
-		long newId = getMaxId(exposureList) + 1;
-		exposure.setId(newId);
+		if (hasExposureWithId(exposure.getId())) return false;
 		exposureList.add(exposure);
 		saveToPrefs(exposureList);
-		return newId;
+		return true;
 	}
 
-	private long getMaxId(List<Exposure> exposureList) {
-		long maxId = 0;
-		for (Exposure exposure : exposureList) {
-			if (exposure.getId() > maxId) {
-				maxId = exposure.getId();
-			}
-		}
-		return maxId;
+	public boolean hasExposureWithId(long id) {
+		return getExposureWithId(id) != null;
 	}
 
 	public Exposure getExposureWithId(long id) {
