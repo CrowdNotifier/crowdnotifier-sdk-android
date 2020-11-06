@@ -4,20 +4,18 @@ import android.util.Base64;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import ch.ubique.n2step.sdk.model.VenueInfo;
 import ch.ubique.n2step.sdk.model.Qr;
+import ch.ubique.n2step.sdk.model.VenueInfo;
 
 import static android.util.Base64.NO_PADDING;
 
 public class QrUtils {
 
-	private static final String QR_CODE_PREFIX = "https://qr-dev.n2s.ch";
-
-	public static VenueInfo getQrInfo(String qrCodeString) {
+	public static VenueInfo getQrInfo(String qrCodeString, String expectedQrCodePrefix) {
 
 		String[] splits = qrCodeString.split("#");
 		if (splits.length != 2) return null;
-		if (!splits[0].equals(QR_CODE_PREFIX)) return null;
+		if (!splits[0].equals(expectedQrCodePrefix)) return null;
 
 		try {
 			int decodeFlags = Base64.NO_WRAP | Base64.URL_SAFE | NO_PADDING;

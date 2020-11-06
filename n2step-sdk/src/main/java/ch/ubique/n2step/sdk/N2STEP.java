@@ -19,10 +19,11 @@ public class N2STEP {
 
 	/**
 	 * @param qrCodeData
+	 * @param expectedQrCodePrefix the part of the url before the # you would accept as valid QR code
 	 * @return A {@link VenueInfo} if the input qrCodeData was a valid qrCode, null otherwise.
 	 */
-	public static VenueInfo getInfo(String qrCodeData) {
-		return QrUtils.getQrInfo(qrCodeData);
+	public static VenueInfo getInfo(String qrCodeData, String expectedQrCodePrefix) {
+		return QrUtils.getQrInfo(qrCodeData, expectedQrCodePrefix);
 	}
 
 
