@@ -7,7 +7,7 @@ android {
 	buildToolsVersion "29.0.3"
 
 	defaultConfig {
-		applicationId "ch.ubique.n2step.sdk_test_app"
+		applicationId "org.crowdnotifier.android.sdk_test_app"
 		minSdkVersion 23
 		targetSdkVersion 30
 		versionCode 1
@@ -29,7 +29,7 @@ android {
 }
 
 dependencies {
-	implementation project(':n2step-sdk')
+	implementation project(':crowdnotifier-sdk')
 
 	implementation 'androidx.appcompat:appcompat:1.2.0'
 	implementation 'com.google.android.material:material:1.2.1'
