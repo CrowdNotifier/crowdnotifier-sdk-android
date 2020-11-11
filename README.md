@@ -35,7 +35,6 @@ getExposureEvents | Returns all currently stored check ins that have previously 
 cleanUpOldData | Removes all check ins that are older than the specified number of days | `public static void cleanUpOldData(Context context, int maxDaysToKeep)`
 
 ## Installation
-### Swift Package Manager
 
 The SDK is available on JCenter and can be included directly as Gradle dependency:
 
