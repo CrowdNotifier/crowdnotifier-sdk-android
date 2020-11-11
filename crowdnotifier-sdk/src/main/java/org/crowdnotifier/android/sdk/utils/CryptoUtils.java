@@ -11,7 +11,7 @@ import org.libsodium.jni.Sodium;
 
 import org.crowdnotifier.android.sdk.model.DayDate;
 import org.crowdnotifier.android.sdk.model.EncryptedVenueVisit;
-import org.crowdnotifier.android.sdk.model.Exposure;
+import org.crowdnotifier.android.sdk.model.ExposureEvent;
 import org.crowdnotifier.android.sdk.model.Payload;
 
 public class CryptoUtils {
@@ -68,9 +68,9 @@ public class CryptoUtils {
 		return new EncryptedVenueVisit(0, new DayDate(departureTime), ephemeralPublicKey, tag, encryptedPayload);
 	}
 
-	public List<Exposure> searchAndDecryptMatches(byte[] sk_venue_sgn, List<EncryptedVenueVisit> venueVisits) {
+	public List<ExposureEvent> searchAndDecryptMatches(byte[] sk_venue_sgn, List<EncryptedVenueVisit> venueVisits) {
 
-		List<Exposure> result = new ArrayList<>();
+		List<ExposureEvent> result = new ArrayList<>();
 
 		byte[] sk_venue_kx = new byte[Sodium.crypto_box_secretkeybytes()];
 		int r = Sodium.crypto_sign_ed25519_sk_to_curve25519(sk_venue_kx, sk_venue_sgn);
@@ -103,8 +103,8 @@ public class CryptoUtils {
 				}
 
 				Payload payload = new Gson().fromJson(new String(decriptedPayloadBytes), Payload.class);
-				Exposure exposure = new Exposure(venueVisit.getId(), payload.getArrivalTime(), payload.getDepartureTime());
-				result.add(exposure);
+				ExposureEvent exposureEvent = new ExposureEvent(venueVisit.getId(), payload.getArrivalTime(), payload.getDepartureTime());
+				result.add(exposureEvent);
 			}
 		}
 

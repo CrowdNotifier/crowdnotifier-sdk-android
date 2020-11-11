@@ -16,13 +16,13 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import org.crowdnotifier.android.sdk.model.DayDate;
-import org.crowdnotifier.android.sdk.model.Exposure;
+import org.crowdnotifier.android.sdk.model.ExposureEvent;
 
 public class ExposureStorage {
 
 	private static final String KEY_CROWDNOTIFIER_STORE = "KEY_CROWDNOTIFIER_STORE";
 	private static final String KEY_EXPOSURES = "KEY_EXPOSURES";
-	private static final Type EXPOSURE_LIST_TYPE = new TypeToken<ArrayList<Exposure>>() { }.getType();
+	private static final Type EXPOSURE_LIST_TYPE = new TypeToken<ArrayList<ExposureEvent>>() { }.getType();
 
 	private static ExposureStorage instance;
 
@@ -49,11 +49,11 @@ public class ExposureStorage {
 		return instance;
 	}
 
-	public boolean addEntry(Exposure exposure) {
-		List<Exposure> exposureList = getEntries();
-		if (hasExposureWithId(exposure.getId())) return false;
-		exposureList.add(exposure);
-		saveToPrefs(exposureList);
+	public boolean addEntry(ExposureEvent exposureEvent) {
+		List<ExposureEvent> exposureEventList = getEntries();
+		if (hasExposureWithId(exposureEvent.getId())) return false;
+		exposureEventList.add(exposureEvent);
+		saveToPrefs(exposureEventList);
 		return true;
 	}
 
@@ -61,33 +61,33 @@ public class ExposureStorage {
 		return getExposureWithId(id) != null;
 	}
 
-	public Exposure getExposureWithId(long id) {
-		for (Exposure exposure : getEntries()) {
-			if (exposure.getId() == id) {
-				return exposure;
+	public ExposureEvent getExposureWithId(long id) {
+		for (ExposureEvent exposureEvent : getEntries()) {
+			if (exposureEvent.getId() == id) {
+				return exposureEvent;
 			}
 		}
 		return null;
 	}
 
-	public List<Exposure> getEntries() {
+	public List<ExposureEvent> getEntries() {
 		return gson.fromJson(sharedPreferences.getString(KEY_EXPOSURES, "[]"), EXPOSURE_LIST_TYPE);
 	}
 
 	public void removeEntriesBefore(int maxDaysToKeep) {
-		List<Exposure> exposureList = getEntries();
+		List<ExposureEvent> exposureEventList = getEntries();
 		DayDate lastDateToKeep = new DayDate().subtractDays(maxDaysToKeep);
-		Iterator<Exposure> iterator = exposureList.iterator();
+		Iterator<ExposureEvent> iterator = exposureEventList.iterator();
 		while (iterator.hasNext()) {
 			if (new DayDate(iterator.next().getEndTime()).isBefore(lastDateToKeep)) {
 				iterator.remove();
 			}
 		}
-		saveToPrefs(exposureList);
+		saveToPrefs(exposureEventList);
 	}
 
-	private void saveToPrefs(List<Exposure> exposureList) {
-		sharedPreferences.edit().putString(KEY_EXPOSURES, gson.toJson(exposureList)).apply();
+	private void saveToPrefs(List<ExposureEvent> exposureEventList) {
+		sharedPreferences.edit().putString(KEY_EXPOSURES, gson.toJson(exposureEventList)).apply();
 	}
 
 	public void clear() {

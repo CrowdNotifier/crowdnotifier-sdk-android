@@ -23,7 +23,7 @@ public class MainFragment extends Fragment {
 	@Override
 	public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
 			@Nullable Bundle savedInstanceState) {
-		CrowdNotifier.cleanupOldData(getContext(),14);
+		CrowdNotifier.cleanUpOldData(getContext(), 14);
 		return inflater.inflate(R.layout.main_fragment, container, false);
 	}
 

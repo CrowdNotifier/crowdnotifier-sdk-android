@@ -1,11 +1,11 @@
 package org.crowdnotifier.android.sdk.model;
 
-public class Exposure {
+public class ExposureEvent {
 	private long id;
 	private long startTimestamp;
 	private long endTimestamp;
 
-	public Exposure(long id, long startTime, long endTime) {
+	public ExposureEvent(long id, long startTime, long endTime) {
 		this.id = id;
 		this.startTimestamp = startTime;
 		this.endTimestamp = endTime;

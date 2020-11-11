@@ -58,24 +58,15 @@ public class VenueVisitStorage {
 		return newId;
 	}
 
-	private long getMaxId(List<EncryptedVenueVisit> venueVisitList) {
-		long maxId = 0;
-		for (EncryptedVenueVisit venueVisit : venueVisitList) {
-			if (venueVisit.getId() > maxId) {
-				maxId = venueVisit.getId();
-			}
-		}
-		return maxId;
+	public boolean updateEntry(EncryptedVenueVisit newVenueVisit) {
+		List<EncryptedVenueVisit> venueVisitList = getEntries();
+		EncryptedVenueVisit oldEntry = getVenueVisitWithId(venueVisitList, newVenueVisit.getId());
+		if (oldEntry == null) return false;
+		venueVisitList.remove(oldEntry);
+		venueVisitList.add(newVenueVisit);
+		return true;
 	}
 
-	public EncryptedVenueVisit getVenueVisitWithId(long id) {
-		for (EncryptedVenueVisit venueVisit : getEntries()) {
-			if (venueVisit.getId() == id) {
-				return venueVisit;
-			}
-		}
-		return null;
-	}
 
 	public List<EncryptedVenueVisit> getEntries() {
 		return gson.fromJson(sharedPreferences.getString(KEY_VENUE_VISITS, "[]"), VENUE_LIST_TYPE);
@@ -91,6 +82,25 @@ public class VenueVisitStorage {
 			}
 		}
 		saveToPrefs(venueVisitList);
+	}
+
+	private long getMaxId(List<EncryptedVenueVisit> venueVisitList) {
+		long maxId = 0;
+		for (EncryptedVenueVisit venueVisit : venueVisitList) {
+			if (venueVisit.getId() > maxId) {
+				maxId = venueVisit.getId();
+			}
+		}
+		return maxId;
+	}
+
+	private EncryptedVenueVisit getVenueVisitWithId(List<EncryptedVenueVisit> venueVisitList, long id) {
+		for (EncryptedVenueVisit venueVisit : venueVisitList) {
+			if (venueVisit.getId() == id) {
+				return venueVisit;
+			}
+		}
+		return null;
 	}
 
 	private void saveToPrefs(List<EncryptedVenueVisit> venueVisitList) {

@@ -11,7 +11,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import org.crowdnotifier.android.sdk.model.Exposure;
+import org.crowdnotifier.android.sdk.model.ExposureEvent;
 import org.crowdnotifier.android.sdk.model.ProblematicEventInfo;
 import org.crowdnotifier.android.sdk.storage.ExposureStorage;
 import org.crowdnotifier.android.sdk.storage.VenueVisitStorage;
@@ -40,15 +40,15 @@ public class MatchingTest {
 		byte[] venuePrivateKey =
 				Base64Util.fromBase64("JYK6EYh6rtB3X5SJOlY98ditkGJBgwpcrCxSZGhXhmeBA0L8OsS90ryJWOcOktEk1yoxr-6OtZtk5Ftmt3-iBQ");
 
-		CrowdNotifier.addVenueVisit(time - 2 * 60 * 60 * 1000l, time, notificationKey, venuePublicKey, context);
+		CrowdNotifier.addCheckIn(time - 2 * 60 * 60 * 1000l, time, notificationKey, venuePublicKey, context);
 
 		ArrayList<ProblematicEventInfo> problematicEvents = new ArrayList<>();
 		problematicEvents.add(new ProblematicEventInfo(venuePrivateKey, time - 1 * 60 * 60 * 1000l, time - 10));
-		List<Exposure> exposures = CrowdNotifier.checkForMatches(problematicEvents, context);
+		List<ExposureEvent> exposureEvents = CrowdNotifier.checkForMatches(problematicEvents, context);
 
-		assertEquals(1, exposures.size());
-		assertEquals(time - 10, exposures.get(0).getEndTime());
-		assertEquals(time - 1 * 60 * 60 * 1000l, exposures.get(0).getStartTime());
+		assertEquals(1, exposureEvents.size());
+		assertEquals(time - 10, exposureEvents.get(0).getEndTime());
+		assertEquals(time - 1 * 60 * 60 * 1000l, exposureEvents.get(0).getStartTime());
 	}
 
 
@@ -60,15 +60,15 @@ public class MatchingTest {
 		byte[] venuePrivateKey =
 				Base64Util.fromBase64("JYK6EYh6rtB3X5SJOlY98ditkGJBgwpcrCxSZGhXhmeBA0L8OsS90ryJWOcOktEk1yoxr-6OtZtk5Ftmt3-iBQ");
 
-		CrowdNotifier.addVenueVisit(time - 2 * 60 * 60 * 1000l, time, notificationKey, venuePublicKey, context);
+		CrowdNotifier.addCheckIn(time - 2 * 60 * 60 * 1000l, time, notificationKey, venuePublicKey, context);
 
 		ArrayList<ProblematicEventInfo> problematicEvents = new ArrayList<>();
 		problematicEvents.add(new ProblematicEventInfo(venuePrivateKey, time - 3 * 60 * 60 * 1000l, time - 10));
-		List<Exposure> exposures = CrowdNotifier.checkForMatches(problematicEvents, context);
+		List<ExposureEvent> exposureEvents = CrowdNotifier.checkForMatches(problematicEvents, context);
 
-		assertEquals(1, exposures.size());
-		assertEquals(time - 10, exposures.get(0).getEndTime());
-		assertEquals(time - 2 * 60 * 60 * 1000l, exposures.get(0).getStartTime());
+		assertEquals(1, exposureEvents.size());
+		assertEquals(time - 10, exposureEvents.get(0).getEndTime());
+		assertEquals(time - 2 * 60 * 60 * 1000l, exposureEvents.get(0).getStartTime());
 	}
 
 	@Test
@@ -79,15 +79,15 @@ public class MatchingTest {
 		byte[] venuePrivateKey =
 				Base64Util.fromBase64("JYK6EYh6rtB3X5SJOlY98ditkGJBgwpcrCxSZGhXhmeBA0L8OsS90ryJWOcOktEk1yoxr-6OtZtk5Ftmt3-iBQ");
 
-		CrowdNotifier.addVenueVisit(time - 2 * 60 * 60 * 1000l, time - 30 * 60 * 1000l, notificationKey, venuePublicKey, context);
+		CrowdNotifier.addCheckIn(time - 2 * 60 * 60 * 1000l, time - 30 * 60 * 1000l, notificationKey, venuePublicKey, context);
 
 		ArrayList<ProblematicEventInfo> problematicEvents = new ArrayList<>();
 		problematicEvents.add(new ProblematicEventInfo(venuePrivateKey, time - 1 * 60 * 60 * 1000l, time - 10));
-		List<Exposure> exposures = CrowdNotifier.checkForMatches(problematicEvents, context);
+		List<ExposureEvent> exposureEvents = CrowdNotifier.checkForMatches(problematicEvents, context);
 
-		assertEquals(1, exposures.size());
-		assertEquals(time - 30 * 60 * 1000l, exposures.get(0).getEndTime());
-		assertEquals(time - 1 * 60 * 60 * 1000l, exposures.get(0).getStartTime());
+		assertEquals(1, exposureEvents.size());
+		assertEquals(time - 30 * 60 * 1000l, exposureEvents.get(0).getEndTime());
+		assertEquals(time - 1 * 60 * 60 * 1000l, exposureEvents.get(0).getStartTime());
 	}
 
 	@Test
@@ -98,15 +98,15 @@ public class MatchingTest {
 		byte[] venuePrivateKey =
 				Base64Util.fromBase64("JYK6EYh6rtB3X5SJOlY98ditkGJBgwpcrCxSZGhXhmeBA0L8OsS90ryJWOcOktEk1yoxr-6OtZtk5Ftmt3-iBQ");
 
-		CrowdNotifier.addVenueVisit(time - 1 * 60 * 60 * 1000l, time - 10, notificationKey, venuePublicKey, context);
+		CrowdNotifier.addCheckIn(time - 1 * 60 * 60 * 1000l, time - 10, notificationKey, venuePublicKey, context);
 
 		ArrayList<ProblematicEventInfo> problematicEvents = new ArrayList<>();
 		problematicEvents.add(new ProblematicEventInfo(venuePrivateKey, time - 1 * 60 * 60 * 1000l, time - 10));
-		List<Exposure> exposures = CrowdNotifier.checkForMatches(problematicEvents, context);
+		List<ExposureEvent> exposureEvents = CrowdNotifier.checkForMatches(problematicEvents, context);
 
-		assertEquals(1, exposures.size());
-		assertEquals(time - 10, exposures.get(0).getEndTime());
-		assertEquals(time - 1 * 60 * 60 * 1000l, exposures.get(0).getStartTime());
+		assertEquals(1, exposureEvents.size());
+		assertEquals(time - 10, exposureEvents.get(0).getEndTime());
+		assertEquals(time - 1 * 60 * 60 * 1000l, exposureEvents.get(0).getStartTime());
 	}
 
 }
