@@ -66,8 +66,8 @@ afterEvaluate {
 		publications {
 			"sdkRelease"(MavenPublication) {
 				from components.release
-				groupId 'ch.ubique.n2step'
-				artifactId 'n2step-sdk-android'
+				groupId 'org.crowdnotifier'
+				artifactId 'crowdnotifier-sdk-android'
 				version android.defaultConfig.versionName + readPropertyWithDefault('bintrayVersionSuffix', '')
 				artifact androidSourcesJar
 			}
@@ -98,9 +98,9 @@ bintray {
 	publications = ['sdkRelease']
 	publish = true
 	pkg {
-		repo = 'n2step-sdk-android'
-		name = 'n2step-sdk-android'
-		userOrg = 'n2step'
+		repo = 'crowdnotifier-sdk-android'
+		name = 'crowdnotifier-sdk-android'
+		userOrg = 'crowdnotifier'
 		licenses = ['MPL-2.0']
 	}
 }

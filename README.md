@@ -40,7 +40,7 @@ The SDK is available on JCenter and can be included directly as Gradle dependenc
 
 ```groovy
 dependencies {
-implementation 'org.crowdnotifier:crowdnotifier-sdk-android:1.0.0'
+implementation 'org.crowdnotifier:crowdnotifier-sdk-android:0.1'
 }
 ```
 
