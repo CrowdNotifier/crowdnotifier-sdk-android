@@ -1,7 +1,7 @@
 # CrowdNotifier-SDK for Android
 
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://github.com/CrowdNotifier/crowdnotifier-sdk-android/blob/master/LICENSE)
-![Android Build](https://github.com/CrowdNotifier/crowdnotifier-sdk-android/workflows/Android%20Build/badge.svg)
+![Android Build](https://github.com/CrowdNotifier/crowdnotifier-sdk-android/workflows/Build/badge.svg)
 ![Android Tests](https://github.com/CrowdNotifier/crowdnotifier-sdk-android/workflows/Android%20Tests/badge.svg)
 
 ## CrowdNotifier
