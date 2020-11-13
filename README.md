@@ -65,7 +65,7 @@ CrowdNotifier.cleanUpOldData(getContext(), 10);
 
 ## Static methods of CrowdNotifier
 
-The CrowdNotifier class implements the following static methods that can be used to interact with the system. All storage of data needs to
+The CrowdNotifier class implements the following static methods that can be used to interact with the system. The SDK only stores encrypted entries of check-ins as well as exposure matches. Any additional storage of data needs to
 be handled by the app itself.
 
 Name | Description | Function Name
