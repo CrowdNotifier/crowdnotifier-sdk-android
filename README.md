@@ -81,7 +81,7 @@ cleanUpOldData | Removes all check ins that are older than the specified number 
 
 This project is truly open-source and we welcome any feedback on the code regarding both the implementation and security aspects. This repository contains the Android prototype SDK, so please focus your feedback for this repository on implementation issues.
 
-Before proceeding, please read the [Code of Conduct](CODE_OF_CONDUCT) to ensure positive and constructive interactions with the community.
+Before proceeding, please read the [Code of Conduct](CODE_OF_CONDUCT.txt) to ensure positive and constructive interactions with the community.
 
 ## License
 
