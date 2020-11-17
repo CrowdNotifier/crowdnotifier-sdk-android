@@ -97,18 +97,20 @@ public class CryptoUtils {
 				}
 
 				byte[] encryptedPayload = venueVisit.getEncryptedPayload();
-				byte[] decriptedPayloadBytes = new byte[encryptedPayload.length - Sodium.crypto_box_sealbytes()];
-				r = Sodium.crypto_box_seal_open(decriptedPayloadBytes, encryptedPayload,
+				byte[] decryptedPayloadBytes = new byte[encryptedPayload.length - Sodium.crypto_box_sealbytes()];
+				r = Sodium.crypto_box_seal_open(decryptedPayloadBytes, encryptedPayload,
 						encryptedPayload.length, pk_venue_kx, sk_venue_kx);
 				if (r != 0) {
 					throw new RuntimeException("crypto_box_seal_open returned a value != 0");
 				}
 
-				Payload payload = new Gson().fromJson(new String(decriptedPayloadBytes), Payload.class);
-				//TODO: Decrypt Message
-				ExposureEvent exposureEvent =
-						new ExposureEvent(venueVisit.getId(), payload.getArrivalTime(), payload.getDepartureTime(),
-								eventInfo.getEncryptedMessage());
+				Payload payload = new Gson().fromJson(new String(decryptedPayloadBytes), Payload.class);
+
+				//TODO: Decrypt message
+				String decryptedMessage = new String(eventInfo.getEncryptedMessage());
+
+				ExposureEvent exposureEvent = new ExposureEvent(venueVisit.getId(), payload.getArrivalTime(),
+						payload.getDepartureTime(), decryptedMessage);
 				result.add(exposureEvent);
 			}
 		}
