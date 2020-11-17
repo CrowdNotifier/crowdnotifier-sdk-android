@@ -43,7 +43,7 @@ public class MatchingTest {
 		CrowdNotifier.addCheckIn(time - 2 * 60 * 60 * 1000l, time, notificationKey, venuePublicKey, context);
 
 		ArrayList<ProblematicEventInfo> problematicEvents = new ArrayList<>();
-		problematicEvents.add(new ProblematicEventInfo(venuePrivateKey, time - 1 * 60 * 60 * 1000l, time - 10));
+		problematicEvents.add(new ProblematicEventInfo(venuePrivateKey, time - 1 * 60 * 60 * 1000l, time - 10, new byte[0]));
 		List<ExposureEvent> exposureEvents = CrowdNotifier.checkForMatches(problematicEvents, context);
 
 		assertEquals(1, exposureEvents.size());
@@ -63,7 +63,7 @@ public class MatchingTest {
 		CrowdNotifier.addCheckIn(time - 2 * 60 * 60 * 1000l, time, notificationKey, venuePublicKey, context);
 
 		ArrayList<ProblematicEventInfo> problematicEvents = new ArrayList<>();
-		problematicEvents.add(new ProblematicEventInfo(venuePrivateKey, time - 3 * 60 * 60 * 1000l, time - 10));
+		problematicEvents.add(new ProblematicEventInfo(venuePrivateKey, time - 3 * 60 * 60 * 1000l, time - 10, new byte[0]));
 		List<ExposureEvent> exposureEvents = CrowdNotifier.checkForMatches(problematicEvents, context);
 
 		assertEquals(1, exposureEvents.size());
@@ -82,7 +82,7 @@ public class MatchingTest {
 		CrowdNotifier.addCheckIn(time - 2 * 60 * 60 * 1000l, time - 30 * 60 * 1000l, notificationKey, venuePublicKey, context);
 
 		ArrayList<ProblematicEventInfo> problematicEvents = new ArrayList<>();
-		problematicEvents.add(new ProblematicEventInfo(venuePrivateKey, time - 1 * 60 * 60 * 1000l, time - 10));
+		problematicEvents.add(new ProblematicEventInfo(venuePrivateKey, time - 1 * 60 * 60 * 1000l, time - 10, new byte[0]));
 		List<ExposureEvent> exposureEvents = CrowdNotifier.checkForMatches(problematicEvents, context);
 
 		assertEquals(1, exposureEvents.size());
@@ -101,7 +101,7 @@ public class MatchingTest {
 		CrowdNotifier.addCheckIn(time - 1 * 60 * 60 * 1000l, time - 10, notificationKey, venuePublicKey, context);
 
 		ArrayList<ProblematicEventInfo> problematicEvents = new ArrayList<>();
-		problematicEvents.add(new ProblematicEventInfo(venuePrivateKey, time - 1 * 60 * 60 * 1000l, time - 10));
+		problematicEvents.add(new ProblematicEventInfo(venuePrivateKey, time - 1 * 60 * 60 * 1000l, time - 10, new byte[0]));
 		List<ExposureEvent> exposureEvents = CrowdNotifier.checkForMatches(problematicEvents, context);
 
 		assertEquals(1, exposureEvents.size());
