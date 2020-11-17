@@ -6,6 +6,7 @@ import java.util.List;
 
 import com.google.gson.Gson;
 
+import org.crowdnotifier.android.sdk.model.ProblematicEventInfo;
 import org.libsodium.jni.NaCl;
 import org.libsodium.jni.Sodium;
 
@@ -68,8 +69,9 @@ public class CryptoUtils {
 		return new EncryptedVenueVisit(0, new DayDate(departureTime), ephemeralPublicKey, tag, encryptedPayload);
 	}
 
-	public List<ExposureEvent> searchAndDecryptMatches(byte[] sk_venue_sgn, List<EncryptedVenueVisit> venueVisits) {
+	public List<ExposureEvent> searchAndDecryptMatches(ProblematicEventInfo eventInfo, List<EncryptedVenueVisit> venueVisits) {
 
+		byte[] sk_venue_sgn = eventInfo.getSecretKey();
 		List<ExposureEvent> result = new ArrayList<>();
 
 		byte[] sk_venue_kx = new byte[Sodium.crypto_box_secretkeybytes()];
@@ -103,7 +105,10 @@ public class CryptoUtils {
 				}
 
 				Payload payload = new Gson().fromJson(new String(decriptedPayloadBytes), Payload.class);
-				ExposureEvent exposureEvent = new ExposureEvent(venueVisit.getId(), payload.getArrivalTime(), payload.getDepartureTime());
+				//TODO: Decrypt Message
+				ExposureEvent exposureEvent =
+						new ExposureEvent(venueVisit.getId(), payload.getArrivalTime(), payload.getDepartureTime(),
+								eventInfo.getEncryptedMessage());
 				result.add(exposureEvent);
 			}
 		}

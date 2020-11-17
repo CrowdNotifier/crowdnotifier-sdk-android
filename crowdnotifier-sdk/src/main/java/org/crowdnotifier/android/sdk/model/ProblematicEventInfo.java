@@ -5,11 +5,13 @@ public class ProblematicEventInfo {
 	private byte[] secretKey;
 	private long startTimestamp;
 	private long endTimestamp;
+	private String encryptedMessage;
 
-	public ProblematicEventInfo(byte[] secretKey, long startTimestamp, long endTimestamp) {
+	public ProblematicEventInfo(byte[] secretKey, long startTimestamp, long endTimestamp, String encryptedMessage) {
 		this.secretKey = secretKey;
 		this.startTimestamp = startTimestamp;
 		this.endTimestamp = endTimestamp;
+		this.encryptedMessage = encryptedMessage;
 	}
 
 	public byte[] getSecretKey() {
@@ -22,6 +24,10 @@ public class ProblematicEventInfo {
 
 	public long getEndTimestamp() {
 		return endTimestamp;
+	}
+
+	public String getEncryptedMessage() {
+		return encryptedMessage;
 	}
 
 }

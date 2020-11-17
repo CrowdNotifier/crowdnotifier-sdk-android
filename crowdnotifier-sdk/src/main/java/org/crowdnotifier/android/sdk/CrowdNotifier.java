@@ -53,17 +53,15 @@ public class CrowdNotifier {
 
 		for (ProblematicEventInfo problematicEventInfo : publishedSKs) {
 
-			List<ExposureEvent> matches = CryptoUtils.getInstance().searchAndDecryptMatches(
-					problematicEventInfo.getSecretKey(),
-					VenueVisitStorage.getInstance(context).getEntries()
-			);
+			List<ExposureEvent> matches = CryptoUtils.getInstance()
+					.searchAndDecryptMatches(problematicEventInfo, VenueVisitStorage.getInstance(context).getEntries());
 
 			for (ExposureEvent match : matches) {
 				if (match.getStartTime() <= problematicEventInfo.getEndTimestamp() &&
 						match.getEndTime() >= problematicEventInfo.getStartTimestamp()) {
 					ExposureEvent newExposureEvent = new ExposureEvent(match.getId(),
 							Math.max(match.getStartTime(), problematicEventInfo.getStartTimestamp()),
-							Math.min(match.getEndTime(), problematicEventInfo.getEndTimestamp()));
+							Math.min(match.getEndTime(), problematicEventInfo.getEndTimestamp()), match.getMessage());
 					boolean added = exposureStorage.addEntry(newExposureEvent);
 					if (added) newExposureEvents.add(newExposureEvent);
 				}
