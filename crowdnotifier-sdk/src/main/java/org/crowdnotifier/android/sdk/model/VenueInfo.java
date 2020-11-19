@@ -43,4 +43,16 @@ public class VenueInfo {
 		return venueType;
 	}
 
+	public String getTitle() {
+		return name;
+	}
+
+	public String getSubtitle() {
+		if (room == null || room.equals("")) {
+			return location;
+		} else {
+			return location + ", " + room;
+		}
+	}
+
 }
