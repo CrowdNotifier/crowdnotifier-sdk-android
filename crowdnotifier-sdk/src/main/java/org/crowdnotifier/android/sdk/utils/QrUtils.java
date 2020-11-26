@@ -52,18 +52,21 @@ public class QrUtils {
 		}
 	}
 
-	public static class NotYetValidException extends Exception { }
+	public static class QRException extends Exception { }
 
 
-	public static class NotValidAnymoreException extends Exception { }
+	public static class NotYetValidException extends QRException { }
 
 
-	public static class InvalidQRCodeFormatException extends Exception { }
+	public static class NotValidAnymoreException extends QRException { }
 
 
-	public static class InvalidQRCodeSignatureException extends Exception { }
+	public static class InvalidQRCodeFormatException extends QRException { }
 
 
-	public static class InvalidQRCodeVersionException extends Exception { }
+	public static class InvalidQRCodeSignatureException extends QRException { }
+
+
+	public static class InvalidQRCodeVersionException extends QRException { }
 
 }
