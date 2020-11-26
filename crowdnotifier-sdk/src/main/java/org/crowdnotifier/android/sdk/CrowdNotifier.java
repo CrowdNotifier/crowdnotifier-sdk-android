@@ -21,7 +21,9 @@ public class CrowdNotifier {
 	 * @param expectedQrCodePrefix the part of the url before the # you would accept as valid QR code
 	 * @return A {@link VenueInfo} if the input qrCode was a valid qrCode, null otherwise.
 	 */
-	public static VenueInfo getVenueInfo(String qrCode, String expectedQrCodePrefix) {
+	public static VenueInfo getVenueInfo(String qrCode, String expectedQrCodePrefix) throws QrUtils.NotYetValidException,
+			QrUtils.NotValidAnymoreException, QrUtils.InvalidQRCodeVersionException, QrUtils.InvalidQRCodeFormatException,
+			QrUtils.InvalidQRCodeSignatureException {
 		return QrUtils.getQrInfo(qrCode, expectedQrCodePrefix);
 	}
 
