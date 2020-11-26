@@ -13,9 +13,7 @@ public class QrUtils {
 
 	private static final String QR_CODE_VERSION = "1";
 
-	public static VenueInfo getQrInfo(String qrCodeString, String expectedQrCodePrefix)
-			throws NotYetValidException, NotValidAnymoreException, InvalidQRCodeVersionException, InvalidQRCodeFormatException,
-			InvalidQRCodeSignatureException {
+	public static VenueInfo getQrInfo(String qrCodeString, String expectedQrCodePrefix) throws QRException {
 
 		String[] fragmentSplit = qrCodeString.split("#");
 		if (fragmentSplit.length != 2) throw new InvalidQRCodeFormatException();
