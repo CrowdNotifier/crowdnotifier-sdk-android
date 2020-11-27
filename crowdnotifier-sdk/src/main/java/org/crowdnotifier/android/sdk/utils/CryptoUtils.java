@@ -106,11 +106,18 @@ public class CryptoUtils {
 
 				Payload payload = new Gson().fromJson(new String(decryptedPayloadBytes), Payload.class);
 
-				//TODO: Decrypt message
-				String decryptedMessage = new String(eventInfo.getEncryptedMessage());
+				byte[] encryptedMessage = eventInfo.getEncryptedMessage();
+				byte[] decryptedMessage = new byte[encryptedMessage.length - Sodium.crypto_box_sealbytes()];
+				r = Sodium.crypto_secretbox_open_easy(decryptedMessage, encryptedMessage, encryptedMessage.length,
+						eventInfo.getNonce(), eventInfo.getSecretKey());
+				if (r != 0) {
+					throw new RuntimeException("crypto_secretbox_open_easy returned a value != 0");
+				}
+
+				String decryptedMessageString = new String(decryptedMessage);
 
 				ExposureEvent exposureEvent = new ExposureEvent(venueVisit.getId(), payload.getArrivalTime(),
-						payload.getDepartureTime(), decryptedMessage);
+						payload.getDepartureTime(), decryptedMessageString);
 				result.add(exposureEvent);
 			}
 		}
