@@ -107,9 +107,9 @@ public class CryptoUtils {
 				Payload payload = new Gson().fromJson(new String(decryptedPayloadBytes), Payload.class);
 
 				byte[] encryptedMessage = eventInfo.getEncryptedMessage();
-				byte[] decryptedMessage = new byte[encryptedMessage.length - Sodium.crypto_box_sealbytes()];
+				byte[] decryptedMessage = new byte[encryptedMessage.length - Sodium.crypto_box_macbytes()];
 				r = Sodium.crypto_secretbox_open_easy(decryptedMessage, encryptedMessage, encryptedMessage.length,
-						eventInfo.getNonce(), eventInfo.getSecretKey());
+						eventInfo.getNonce(), payload.getNotificationKey());
 				if (r != 0) {
 					throw new RuntimeException("crypto_secretbox_open_easy returned a value != 0");
 				}
