@@ -26,22 +26,18 @@ public class CrowdNotifier {
 	}
 
 
-	public static long addCheckIn(long arrivalTime, long departureTime, byte[] notificationKey, byte[] venuePublicKey,
-			Context context) {
+	public static long addCheckIn(long arrivalTime, long departureTime, VenueInfo venueInfo, Context context) {
 
 		CryptoUtils crypto = CryptoUtils.getInstance();
-		EncryptedVenueVisit encryptedVenueVisit =
-				crypto.getEncryptedVenueVisit(arrivalTime, departureTime, notificationKey, venuePublicKey);
+		EncryptedVenueVisit encryptedVenueVisit = crypto.getEncryptedVenueVisit(arrivalTime, departureTime, venueInfo);
 
 		return VenueVisitStorage.getInstance(context).addEntry(encryptedVenueVisit);
 	}
 
-	public static boolean updateCheckIn(long id, long arrivalTime, long departureTime, byte[] notificationKey,
-			byte[] venuePublicKey, Context context) {
+	public static boolean updateCheckIn(long id, long arrivalTime, long departureTime, VenueInfo venueInfo, Context context) {
 
 		CryptoUtils crypto = CryptoUtils.getInstance();
-		EncryptedVenueVisit encryptedVenueVisit =
-				crypto.getEncryptedVenueVisit(arrivalTime, departureTime, notificationKey, venuePublicKey);
+		EncryptedVenueVisit encryptedVenueVisit = crypto.getEncryptedVenueVisit(arrivalTime, departureTime, venueInfo);
 		encryptedVenueVisit.setId(id);
 		return VenueVisitStorage.getInstance(context).updateEntry(encryptedVenueVisit);
 	}

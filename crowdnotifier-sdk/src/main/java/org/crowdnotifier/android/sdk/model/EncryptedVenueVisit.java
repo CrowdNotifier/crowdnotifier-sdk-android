@@ -7,8 +7,7 @@ public class EncryptedVenueVisit {
 	private byte[] tag;
 	private byte[] encryptedPayload;
 
-	public EncryptedVenueVisit(long id, DayDate dayDate, byte[] ephemeralPublicKey, byte[] tag,
-			byte[] encryptedPayload) {
+	public EncryptedVenueVisit(long id, DayDate dayDate, byte[] ephemeralPublicKey, byte[] tag, byte[] encryptedPayload) {
 		this.id = id;
 		this.dayDate = dayDate;
 		this.ephemeralPublicKey = ephemeralPublicKey;

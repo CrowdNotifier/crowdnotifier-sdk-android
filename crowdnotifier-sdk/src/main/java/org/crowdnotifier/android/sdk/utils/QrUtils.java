@@ -30,11 +30,6 @@ public class QrUtils {
 			Qr.QRCodeWrapper qrCodeWrapper = Qr.QRCodeWrapper.parseFrom(decoded);
 			Qr.QRCodeContent qrCode = qrCodeWrapper.getContent();
 
-			boolean validSignature =
-					CryptoUtils.getInstance().isSignatureValid(qrCodeWrapper.getSignature().toByteArray(), qrCode.toByteArray(),
-							qrCode.getPublicKey().toByteArray());
-			if (!validSignature) throw new InvalidQRCodeSignatureException();
-
 			if ((qrCode.hasValidFrom() && qrCode.getValidFrom() > System.currentTimeMillis())) {
 				throw new NotYetValidException();
 			}
@@ -43,7 +38,8 @@ public class QrUtils {
 			}
 
 			return new VenueInfo(qrCode.getName(), qrCode.getLocation(), qrCode.getRoom(), qrCode.getVenueType(),
-					qrCode.getPublicKey().toByteArray(), qrCode.getNotificationKey().toByteArray());
+					qrCodeWrapper.getPublicKey().toByteArray(), qrCode.getNotificationKey().toByteArray(),
+					qrCodeWrapper.getR1().toByteArray(), qrCode.getValidFrom(), qrCode.getValidTo());
 		} catch (InvalidProtocolBufferException e) {
 			e.printStackTrace();
 			throw new InvalidQRCodeFormatException();
@@ -60,9 +56,6 @@ public class QrUtils {
 
 
 	public static class InvalidQRCodeFormatException extends QRException { }
-
-
-	public static class InvalidQRCodeSignatureException extends QRException { }
 
 
 	public static class InvalidQRCodeVersionException extends QRException { }
