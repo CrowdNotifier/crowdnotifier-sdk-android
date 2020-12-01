@@ -34,7 +34,7 @@ The SDK is available on JCenter and can be included directly as Gradle dependenc
 
 ```groovy
 dependencies {
-  implementation 'org.crowdnotifier:crowdnotifier-sdk-android:0.1'
+  implementation 'org.crowdnotifier:crowdnotifier-sdk-android:1.1'
 }
 ```
 
@@ -68,7 +68,7 @@ be handled by the app itself.
 Name | Description | Function Name
 ---- | ----------- | -------------
 getVenueInfo | Returns information about the data contained in a QR code, or null if the QR code does not have a valid format | `public static VenueInfo getVenueInfo(String qrCode, String expectedQrCodePrefix)`
-addCheckin | Stores a check in given arrival time, departure time and a VenueInfo object. Returns the id of the stored entry. | `public static long addCheckIn(long arrivalTime, long departureTime, VenueInfo venueInfo,Context context)`
+addCheckin | Stores a check in given arrival time, departure time and a VenueInfo object. Returns the id of the stored entry. | `public static long addCheckIn(long arrivalTime, long departureTime, VenueInfo venueInfo, Context context)`
 updateCheckin | Updates a checkin that has previously been stored | `public static boolean updateCheckIn(long id, long arrivalTime, long departureTime, VenueInfo venueInfo, Context context)`
 checkForMatches | Given a set of published events with a known infected visitor, stores and returns those locally stored check ins that overlap with one of the problematic events | `public static List<ExposureEvent> checkForMatches(List<ProblematicEventInfo> publishedSKs, Context context)`
 getExposureEvents | Returns all currently stored check ins that have previously matched a problematic event | `public static List<ExposureEvent> getExposureEvents(Context context)`
