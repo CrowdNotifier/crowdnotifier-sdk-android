@@ -1,0 +1,3 @@
+include ':crowdnotifier-sdk'
+include ':app'
+rootProject.name = "Crowdnotifier-Test-App"
