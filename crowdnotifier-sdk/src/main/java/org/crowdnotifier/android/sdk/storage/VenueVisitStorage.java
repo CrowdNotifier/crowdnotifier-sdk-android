@@ -64,6 +64,7 @@ public class VenueVisitStorage {
 		if (oldEntry == null) return false;
 		venueVisitList.remove(oldEntry);
 		venueVisitList.add(newVenueVisit);
+		saveToPrefs(venueVisitList);
 		return true;
 	}
 

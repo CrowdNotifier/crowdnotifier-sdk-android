@@ -30,10 +30,10 @@ public class QrUtils {
 			Qr.QRCodeWrapper qrCodeWrapper = Qr.QRCodeWrapper.parseFrom(decoded);
 			Qr.QRCodeContent qrCode = qrCodeWrapper.getContent();
 
-			if ((qrCode.hasValidFrom() && qrCode.getValidFrom() > System.currentTimeMillis())) {
+			if (qrCode.hasValidFrom() && System.currentTimeMillis() < qrCode.getValidFrom()) {
 				throw new NotYetValidException();
 			}
-			if (qrCode.hasValidTo() && qrCode.getValidTo() < System.currentTimeMillis()) {
+			if (qrCode.hasValidTo() && System.currentTimeMillis() > qrCode.getValidTo()) {
 				throw new NotValidAnymoreException();
 			}
 
