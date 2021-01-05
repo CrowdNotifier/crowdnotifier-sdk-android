@@ -54,6 +54,19 @@ android {
 		}
 	}
 
+	externalNativeBuild {
+		ndkBuild {
+			path '../mcl/ffi/java/android/jni/Android.mk'
+		}
+	}
+
+	sourceSets{
+		main{
+			java{
+				srcDirs += ['../mcl/ffi/java']
+			}
+		}
+	}
 }
 
 
