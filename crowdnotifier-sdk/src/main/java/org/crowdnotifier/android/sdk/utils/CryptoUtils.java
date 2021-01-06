@@ -11,6 +11,7 @@ import com.google.protobuf.ByteString;
 import com.goterl.lazycode.lazysodium.LazySodiumAndroid;
 import com.goterl.lazycode.lazysodium.SodiumAndroid;
 import com.goterl.lazycode.lazysodium.interfaces.Box;
+import com.herumi.mcl.Mcl;
 
 import org.crowdnotifier.android.sdk.model.*;
 
@@ -26,6 +27,8 @@ public class CryptoUtils {
 
 	private CryptoUtils() {
 		sodium = new LazySodiumAndroid(new SodiumAndroid()).getSodium();
+		System.loadLibrary("mcljava");
+		Mcl.SystemInit(Mcl.BLS12_381);
 	}
 
 	public static synchronized CryptoUtils getInstance() {
