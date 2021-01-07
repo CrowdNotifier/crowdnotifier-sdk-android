@@ -49,11 +49,17 @@ public class VenueVisitStorage {
 		return instance;
 	}
 
-	public long addEntry(EncryptedVenueVisit newVenueVisit) {
+	/**
+	 * Sets a single ID to all entries in the passed list and stores all entries.
+	 * @return the ID
+	 */
+	public long addEntries(List<EncryptedVenueVisit> newVenueVisits){
 		List<EncryptedVenueVisit> venueVisitList = getEntries();
 		long newId = getMaxId(venueVisitList) + 1;
-		newVenueVisit.setId(newId);
-		venueVisitList.add(newVenueVisit);
+		for (EncryptedVenueVisit newVenueVisit : newVenueVisits){
+			newVenueVisit.setId(newId);
+			venueVisitList.add(newVenueVisit);
+		}
 		saveToPrefs(venueVisitList);
 		return newId;
 	}

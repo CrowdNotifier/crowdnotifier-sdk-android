@@ -27,19 +27,12 @@ public class QrUtils {
 		try {
 			int decodeFlags = Base64.NO_WRAP | Base64.URL_SAFE | NO_PADDING;
 			byte[] decoded = Base64.decode(fragmentSplit[1], decodeFlags);
-			Qr.QRCodeWrapper qrCodeWrapper = Qr.QRCodeWrapper.parseFrom(decoded);
-			Qr.QRCodeContent qrCode = qrCodeWrapper.getContent();
+			Qr.QRCodeEntry qrCodeEntry = Qr.QRCodeEntry.parseFrom(decoded);
+			Qr.QRCodeContent qrCode = qrCodeEntry.getData();
 
-			if (qrCode.hasValidFrom() && System.currentTimeMillis() < qrCode.getValidFrom()) {
-				throw new NotYetValidException();
-			}
-			if (qrCode.hasValidTo() && System.currentTimeMillis() > qrCode.getValidTo()) {
-				throw new NotValidAnymoreException();
-			}
-
-			return new VenueInfo(qrCode.getName(), qrCode.getLocation(), qrCode.getRoom(), qrCode.getVenueType(),
-					qrCodeWrapper.getPublicKey().toByteArray(), qrCode.getNotificationKey().toByteArray(),
-					qrCodeWrapper.getR1().toByteArray(), qrCode.getValidFrom(), qrCode.getValidTo());
+			return new VenueInfo(qrCode.getName(), qrCode.getLocation(), qrCode.getRoom(),
+					qrCode.getNotificationKey().toByteArray(), qrCode.getVenueType(),
+					qrCodeEntry.getMasterPublicKey().toByteArray(), qrCodeEntry.getEntryProof());
 		} catch (InvalidProtocolBufferException e) {
 			e.printStackTrace();
 			throw new InvalidQRCodeFormatException();
@@ -47,12 +40,6 @@ public class QrUtils {
 	}
 
 	public static class QRException extends Exception { }
-
-
-	public static class NotYetValidException extends QRException { }
-
-
-	public static class NotValidAnymoreException extends QRException { }
 
 
 	public static class InvalidQRCodeFormatException extends QRException { }

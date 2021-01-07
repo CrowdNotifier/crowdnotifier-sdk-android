@@ -29,17 +29,21 @@ public class CrowdNotifier {
 	public static long addCheckIn(long arrivalTime, long departureTime, VenueInfo venueInfo, Context context) {
 
 		CryptoUtils crypto = CryptoUtils.getInstance();
-		EncryptedVenueVisit encryptedVenueVisit = crypto.getEncryptedVenueVisit(arrivalTime, departureTime, venueInfo);
+		List<EncryptedVenueVisit> encryptedVenueVisits = crypto.getEncryptedVenueVisit(arrivalTime, departureTime, venueInfo);
 
-		return VenueVisitStorage.getInstance(context).addEntry(encryptedVenueVisit);
+		return VenueVisitStorage.getInstance(context).addEntries(encryptedVenueVisits);
 	}
 
 	public static boolean updateCheckIn(long id, long arrivalTime, long departureTime, VenueInfo venueInfo, Context context) {
 
+		/*
 		CryptoUtils crypto = CryptoUtils.getInstance();
 		EncryptedVenueVisit encryptedVenueVisit = crypto.getEncryptedVenueVisit(arrivalTime, departureTime, venueInfo);
 		encryptedVenueVisit.setId(id);
 		return VenueVisitStorage.getInstance(context).updateEntry(encryptedVenueVisit);
+		 */
+		//TODO
+		return false;
 	}
 
 	public static List<ExposureEvent> checkForMatches(List<ProblematicEventInfo> publishedSKs, Context context) {
