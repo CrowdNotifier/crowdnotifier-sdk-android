@@ -7,6 +7,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import com.google.protobuf.ByteString;
@@ -58,27 +59,29 @@ public class MatchingTest {
 	@Test
 	public void testMatching() {
 
-		//Setup
+		//Setup Health Authority
 		KeyPair haKeyPair = createHAKeyPair();
-		Location location = new Location(haKeyPair.publicKey, Qr.QRCodeContent.VenueType.OTHER, "Name", "Location", "Room");
-		Qr.QRCodeTrace qrTrace = location.getQrCodeTrace();
+
+		//Setup Location Owner
 		byte[] notificationKey = Base64Util.fromBase64("HYZf4ROIMIp12Jr521JS3fttAmV4y1vATkx3MhTFB-E");
+		Location location =
+				new Location(haKeyPair.publicKey, Qr.QRCodeContent.VenueType.OTHER, "Name", "Location", "Room", notificationKey);
+		Qr.QRCodeTrace qrTrace = location.getQrCodeTrace();
 
 		String s = "a";
 		VenueInfo venueInfo = new VenueInfo(s, s, s, notificationKey, Qr.QRCodeContent.VenueType.OTHER,
 				location.iLocationData.masterPublicKey.serialize(), location.iLocationData.entryProof);
 
-		//App user check in part
+		//User checks in with App
 		CrowdNotifier.addCheckIn(0, 1000, venueInfo, context);
 
-		//Venue Owner part
+		//Venue Owner Creates PreTraces
 		List<Qr.PreTraceWithProof> preTraceWithProofList = createPreTrace(qrTrace, 0, 1000, venueInfo);
 
-
-		//Health Authority Part
+		//Health Authority generates Traces
 		List<ProblematicEventInfo> publishedSKs = new ArrayList<>();
 		for (Qr.PreTraceWithProof preTraceWithProof : preTraceWithProofList) {
-			Qr.Trace trace = createTrace(preTraceWithProof, haKeyPair);
+			Qr.Trace trace = createTrace(preTraceWithProof, location.qrCodeContent, haKeyPair, venueInfo);
 
 			String message = "This is a message";
 			byte[] nonce = getRandomValue(Box.NONCEBYTES);
@@ -88,17 +91,20 @@ public class MatchingTest {
 					trace.getSecretKeyForIdentity().toByteArray(), 4, 100, encryptedMessage, nonce));
 		}
 
-		//App user matching part
-		List<ExposureEvent> exposureEvents = CrowdNotifier.checkForMatches(publishedSKs,context);
+		//User matches Traces with VenueVisits stored in App
+		List<ExposureEvent> exposureEvents = CrowdNotifier.checkForMatches(publishedSKs, context);
 
+		//Final Checks
 		assertEquals(1, exposureEvents.size());
 		assertEquals("This is a message", exposureEvents.get(0).getMessage());
-
 	}
 
-	private Qr.Trace createTrace(Qr.PreTraceWithProof preTraceWithProof, KeyPair haKeyPair) {
+	private Qr.Trace createTrace(Qr.PreTraceWithProof preTraceWithProof, Qr.QRCodeContent qrCodeContent, KeyPair haKeyPair, VenueInfo venueInfo) {
 
-		byte[] ctxha = preTraceWithProof.getPreTrace().getCipherTextHealthAuthority().toByteArray();
+		Qr.PreTrace preTrace = preTraceWithProof.getPreTrace();
+		Qr.TraceProof proof = preTraceWithProof.getProof();
+
+		byte[] ctxha = preTrace.getCipherTextHealthAuthority().toByteArray();
 		byte[] mskh_raw = new byte[ctxha.length - Box.SEALBYTES];
 		int result = sodium.crypto_box_seal_open(mskh_raw, ctxha, ctxha.length, haKeyPair.publicKey, haKeyPair.privateKey);
 		if (result != 0) { throw new RuntimeException("crypto_box_seal_open returned a value != 0"); }
@@ -106,20 +112,31 @@ public class MatchingTest {
 		Fr mskh = new Fr();
 		mskh.deserialize(mskh_raw);
 
-		G1 partialSecretKeyForIdentityOfHealthAuthority = keyDer(mskh,
-				preTraceWithProof.getPreTrace().getIdentity().toByteArray());
+		G1 partialSecretKeyForIdentityOfHealthAuthority = keyDer(mskh, preTrace.getIdentity().toByteArray());
 		G1 partialSecretKeyForIdentityOfLocation = new G1();
-		partialSecretKeyForIdentityOfLocation
-				.deserialize(preTraceWithProof.getPreTrace().getPartialSecretKeyForIdentityOfLocation().toByteArray());
+		partialSecretKeyForIdentityOfLocation.deserialize(preTrace.getPartialSecretKeyForIdentityOfLocation().toByteArray());
 		G1 secretKeyForIdentity = new G1();
 
 		Mcl.add(secretKeyForIdentity, partialSecretKeyForIdentityOfLocation, partialSecretKeyForIdentityOfHealthAuthority);
 
+		byte[] identity = cryptoUtils.generateIdentity(preTraceWithProof.getCounter(), venueInfo);
+
+		/*
+		byte[] identity = cryptoUtils.generateIdentity(qrCodeContent, proof.getNonce1().toByteArray(),
+				proof.getNonce2().toByteArray(), preTraceWithProof.getCounter());
+
+		 */
+		if (!Arrays.equals(preTrace.getIdentity().toByteArray(), identity)) {
+			return null;
+		}
+
 		//verifyTrace
 		//TODO verify Trace
 
+		//cryptoUtils.generateIdentity(preTraceWithProof.getPreTrace().)
+
 		return Qr.Trace.newBuilder()
-				.setIdentity(preTraceWithProof.getPreTrace().getIdentity())
+				.setIdentity(preTrace.getIdentity())
 				.setSecretKeyForIdentity(ByteString.copyFrom(secretKeyForIdentity.serialize()))
 				.build();
 	}
@@ -160,11 +177,15 @@ public class MatchingTest {
 					.setPreTrace(preTrace)
 					.setProof(traceProof)
 					.setInfo(masterTraceRecord.getInfo())
+					.setStartTime(startTime)
+					.setEndTime(endTime)
+					.setCounter(hour)
 					.build();
 			preTraceWithProofsList.add(preTraceWithProof);
 		}
 		return preTraceWithProofsList;
 	}
+
 
 	private G1 keyDer(Fr msk, byte[] identity) {
 		G1 g1_temp = new G1();
@@ -351,13 +372,14 @@ public class MatchingTest {
 		ILocationData iLocationData;
 
 		public Location(byte[] healthAuthorityPublicKey, Qr.QRCodeContent.VenueType venueType, String name, String location,
-				String room) {
+				String room, byte[] notificationKey) {
 			this.healthAuthorityPublicKey = healthAuthorityPublicKey;
 			this.qrCodeContent = Qr.QRCodeContent.newBuilder()
 					.setVenueType(venueType)
 					.setName(name)
 					.setLocation(location)
 					.setRoom(room)
+					.setNotificationKey(ByteString.copyFrom(notificationKey))
 					.build();
 			this.iLocationData = genCode(healthAuthorityPublicKey, qrCodeContent);
 		}

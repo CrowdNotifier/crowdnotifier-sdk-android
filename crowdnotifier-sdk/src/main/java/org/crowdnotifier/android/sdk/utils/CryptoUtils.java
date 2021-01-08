@@ -3,7 +3,6 @@ package org.crowdnotifier.android.sdk.utils;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import com.google.gson.Gson;
@@ -21,8 +20,6 @@ import org.crowdnotifier.android.sdk.model.*;
 
 public class CryptoUtils {
 
-	private static final int KEY_BYTES = Box.SECRETKEYBYTES;
-	private static final int SEAL_BYTES = Box.SEALBYTES;
 	private static final int HASH_BYTES = 32;
 	private static final int NONCE_BYTES = 32;
 
@@ -60,16 +57,8 @@ public class CryptoUtils {
 
 			byte[] aux = (new Gson().toJson(new Payload(arrivalTime, departureTime, venueInfo.getNotificationKey()))).getBytes();
 
-			byte[] ibeEncryptionInternal = Qr.IBEEncryptionInternal.newBuilder()
-					.setNonceX(ByteString.copyFrom(nonceX))
-					.setMessage(ByteString.copyFrom(aux))
-					.setIdentity(ByteString.copyFrom(identity))
-					.build().toByteArray();
-
-			byte[] r_raw = crypto_hash_sha256(ibeEncryptionInternal);
-
 			Fr r = new Fr();
-			r.setHashOf(r_raw);
+			r.setHashOf(concatenate(nonceX, concatenate(identity, aux)));
 
 			G2 c1 = new G2();
 			Mcl.mul(c1, baseG2(), r);
@@ -117,7 +106,21 @@ public class CryptoUtils {
 			byte[] msg_p = crypto_secretbox_open_easy(crypto_hash_sha256(x_p), venueVisit.getC3(), venueVisit.getNonce());
 
 			//Additional verification
-			//TODO: Do additional verification
+			Fr r_p = new Fr();
+			r_p.setHashOf(concatenate(x_p, concatenate(eventInfo.getIdentity(), msg_p)));
+
+			G2 c1_p = new G2();
+			Mcl.mul(c1_p, baseG2(), r_p);
+
+			if (!c1.equals(c1_p)) {
+				continue;
+			}
+
+			// Check that skid is in G1*
+			//TODO: check both: if (!secretKeyForIdentity.isValidOrder() || secretKeyForIdentity.isZero())
+			if (secretKeyForIdentity.isZero()) {
+				continue;
+			}
 
 			Payload payload = new Gson().fromJson(new String(msg_p), Payload.class);
 
@@ -134,19 +137,17 @@ public class CryptoUtils {
 		return exposureEvents;
 	}
 
+	public byte[] generateIdentity(Qr.QRCodeContent qrCodeContent, byte[] nonce1, byte[] nonce2, int hour) {
+		byte[] hash1 = crypto_hash_sha256(concatenate(qrCodeContent.toByteArray(), nonce1));
+		return crypto_hash_sha256(concatenate(hash1, concatenate(String.valueOf(hour).getBytes(), nonce2)));
+	}
+
 	public byte[] generateIdentity(int hour, VenueInfo venueInfo) {
 		byte[] hash1 = crypto_hash_sha256(
 				concatenate(venueInfoToInfoBytes(venueInfo), venueInfo.getEntryProof().getNonce1().toByteArray()));
-		Qr.IBEIdentityInternal ibeIdentityInternal = Qr.IBEIdentityInternal.newBuilder()
-				.setHash(ByteString.copyFrom(hash1))
-				.setNonce(venueInfo.getEntryProof().getNonce2())
-				.setCounter(hour)
-				.build();
-
-		byte[] identity = crypto_hash_sha256(ibeIdentityInternal.toByteArray());
-		return identity;
+		return crypto_hash_sha256(concatenate(hash1,
+				concatenate(String.valueOf(hour).getBytes(), venueInfo.getEntryProof().getNonce2().toByteArray())));
 	}
-
 
 	private byte[] crypto_secretbox_easy(byte[] secretKey, byte[] message, byte[] nonce) {
 		byte[] encrytpedMessage = new byte[message.length + Box.MACBYTES];
@@ -161,7 +162,6 @@ public class CryptoUtils {
 		if (result != 0) { throw new RuntimeException("crypto_secretbox_open_easy returned a value != 0"); }
 		return decryptedMessage;
 	}
-
 
 	private byte[] xor(byte[] a, byte[] b) {
 		if (a.length != b.length) throw new RuntimeException("Cannot xor two byte arrays of different length");
@@ -195,7 +195,6 @@ public class CryptoUtils {
 		}
 		return result;
 	}
-
 
 	private byte[] venueInfoToInfoBytes(VenueInfo venueInfo) {
 		Qr.QRCodeContent qrCodeContent = Qr.QRCodeContent.newBuilder()
