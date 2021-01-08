@@ -71,7 +71,7 @@ public class MatchingTest {
 		long qrCodeValidTo = currentTime + ONE_DAY_IN_MILLIS;
 		Location location = new Location(haKeyPair.publicKey, Qr.QRCodeContent.VenueType.OTHER, "Name", "Location",
 				"Room", notificationKey, qrCodeValidFrom, qrCodeValidTo);
-		Qr.QRCodeTrace qrTrace = location.getQrCodeTrace();
+		Backend.QRCodeTrace qrTrace = location.getQrCodeTrace();
 		Qr.QRCodeEntry qrEntry = location.getQrCodeEntry();
 
 		//User checks in with App
@@ -87,13 +87,13 @@ public class MatchingTest {
 		long exposureStart = currentTime - ONE_HOUR_IN_MILLIS;
 		long exposureEnd = currentTime;
 		String message = "This is a message";
-		List<Qr.PreTraceWithProof> preTraceWithProofList =
+		List<Backend.PreTraceWithProof> preTraceWithProofList =
 				createPreTrace(qrTrace, exposureStart, exposureEnd, notificationKey, message);
 
 		//Health Authority generates Traces
 		List<ProblematicEventInfo> publishedSKs = new ArrayList<>();
-		for (Qr.PreTraceWithProof preTraceWithProof : preTraceWithProofList) {
-			Qr.Trace trace = createTrace(preTraceWithProof, haKeyPair);
+		for (Backend.PreTraceWithProof preTraceWithProof : preTraceWithProofList) {
+			Backend.Trace trace = createTrace(preTraceWithProof, haKeyPair);
 
 			byte[] nonce = getRandomValue(Box.NONCEBYTES);
 			byte[] encryptedMessage = encryptMessage(preTraceWithProof.getPreTrace().getNotificationKey().toByteArray(),
@@ -114,10 +114,10 @@ public class MatchingTest {
 		assertEquals("This is a message", exposureEvents.get(0).getMessage());
 	}
 
-	private Qr.Trace createTrace(Qr.PreTraceWithProof preTraceWithProof, KeyPair haKeyPair) throws InvalidProtocolBufferException {
+	private Backend.Trace createTrace(Backend.PreTraceWithProof preTraceWithProof, KeyPair haKeyPair) throws InvalidProtocolBufferException {
 
-		Qr.PreTrace preTrace = preTraceWithProof.getPreTrace();
-		Qr.TraceProof proof = preTraceWithProof.getProof();
+		Backend.PreTrace preTrace = preTraceWithProof.getPreTrace();
+		Backend.TraceProof proof = preTraceWithProof.getProof();
 
 		byte[] ctxha = preTrace.getCipherTextHealthAuthority().toByteArray();
 		byte[] mskh_raw = new byte[ctxha.length - Box.SEALBYTES];
@@ -150,23 +150,23 @@ public class MatchingTest {
 		byte[] msg_dec = cryptoUtils.decryptInternal(encryptedData, secretKeyForIdentity, identity);
 		if (msg_dec == null) throw new RuntimeException("Health Authority could not verify Trace");
 
-		return Qr.Trace.newBuilder()
+		return Backend.Trace.newBuilder()
 				.setIdentity(preTrace.getIdentity())
 				.setSecretKeyForIdentity(ByteString.copyFrom(secretKeyForIdentity.serialize()))
 				.build();
 	}
 
-	private List<Qr.PreTraceWithProof> createPreTrace(Qr.QRCodeTrace qrCodeTrace, long startTime, long endTime,
+	private List<Backend.PreTraceWithProof> createPreTrace(Backend.QRCodeTrace qrCodeTrace, long startTime, long endTime,
 			byte[] notificationKey, String message) throws InvalidProtocolBufferException {
 
-		Qr.MasterTrace masterTraceRecord = qrCodeTrace.getMasterTraceRecord();
+		Backend.MasterTrace masterTraceRecord = qrCodeTrace.getMasterTraceRecord();
 		G2 masterPublicKey = new G2();
 		masterPublicKey.deserialize(masterTraceRecord.getMasterPublicKey().toByteArray());
 
 		Fr masterSecretKeyLocation = new Fr();
 		masterSecretKeyLocation.deserialize(masterTraceRecord.getMasterSecretKeyLocation().toByteArray());
 
-		ArrayList<Qr.PreTraceWithProof> preTraceWithProofsList = new ArrayList<>();
+		ArrayList<Backend.PreTraceWithProof> preTraceWithProofsList = new ArrayList<>();
 		ArrayList<Integer> affectedHours = cryptoUtils.getAffectedHours(startTime, endTime);
 		for (Integer hour : affectedHours) {
 
@@ -177,7 +177,7 @@ public class MatchingTest {
 
 			G1 partialSecretKeyForIdentityOfLocation = keyDer(masterSecretKeyLocation, identity);
 
-			Qr.PreTrace preTrace = Qr.PreTrace.newBuilder()
+			Backend.PreTrace preTrace = Backend.PreTrace.newBuilder()
 					.setIdentity(ByteString.copyFrom(identity))
 					.setCipherTextHealthAuthority(masterTraceRecord.getCipherTextHealthAuthority())
 					.setPartialSecretKeyForIdentityOfLocation(
@@ -186,13 +186,13 @@ public class MatchingTest {
 					.setMessage(message)
 					.build();
 
-			Qr.TraceProof traceProof = Qr.TraceProof.newBuilder()
+			Backend.TraceProof traceProof = Backend.TraceProof.newBuilder()
 					.setMasterPublicKey(masterTraceRecord.getMasterPublicKey())
 					.setNonce1(masterTraceRecord.getNonce1())
 					.setNonce2(masterTraceRecord.getNonce2())
 					.build();
 
-			Qr.PreTraceWithProof preTraceWithProof = Qr.PreTraceWithProof.newBuilder()
+			Backend.PreTraceWithProof preTraceWithProof = Backend.PreTraceWithProof.newBuilder()
 					.setPreTrace(preTrace)
 					.setProof(traceProof)
 					.setInfo(masterTraceRecord.getInfo())
@@ -276,7 +276,7 @@ public class MatchingTest {
 				.setNonce2(ByteString.copyFrom(nonce2))
 				.build();
 
-		Qr.MasterTrace masterTrace = Qr.MasterTrace.newBuilder()
+		Backend.MasterTrace masterTrace = Backend.MasterTrace.newBuilder()
 				.setMasterPublicKey(ByteString.copyFrom(masterPublicKey.serialize()))
 				.setMasterSecretKeyLocation(ByteString.copyFrom(locationKeyPair.privateKey.serialize()))
 				.setInfo(qrCodeContent.toByteString())
@@ -342,9 +342,9 @@ public class MatchingTest {
 		}
 
 
-		public Qr.QRCodeTrace getQrCodeTrace() {
+		public Backend.QRCodeTrace getQrCodeTrace() {
 
-			return Qr.QRCodeTrace.newBuilder()
+			return Backend.QRCodeTrace.newBuilder()
 					.setVersion(2)
 					.setMasterTraceRecord(iLocationData.masterTrace)
 					.build();
@@ -356,9 +356,9 @@ public class MatchingTest {
 	private class ILocationData {
 		G2 masterPublicKey;
 		Qr.EntryProof entryProof;
-		Qr.MasterTrace masterTrace;
+		Backend.MasterTrace masterTrace;
 
-		public ILocationData(G2 masterPublicKey, Qr.EntryProof entryProof, Qr.MasterTrace masterTrace) {
+		public ILocationData(G2 masterPublicKey, Qr.EntryProof entryProof, Backend.MasterTrace masterTrace) {
 			this.masterPublicKey = masterPublicKey;
 			this.entryProof = entryProof;
 			this.masterTrace = masterTrace;

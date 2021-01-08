@@ -1,0 +1,45 @@
+syntax = "proto3";
+package org.crowdnotifier.android.sdk.model;
+
+message QRCodeTrace {
+  uint32 version = 1;
+  MasterTrace masterTraceRecord = 2;
+}
+
+message MasterTrace {
+  bytes masterPublicKey = 1;
+  bytes masterSecretKeyLocation = 2;
+  bytes info = 3;
+  bytes nonce1 = 4;
+  bytes nonce2 = 5;
+  bytes cipherTextHealthAuthority = 6;
+}
+
+message PreTrace {
+  bytes identity = 1;
+  bytes partialSecretKeyForIdentityOfLocation = 2;
+  bytes cipherTextHealthAuthority = 3;
+  string message = 4;
+  bytes notificationKey = 5;
+}
+
+message TraceProof {
+  bytes masterPublicKey = 1;
+  bytes nonce1 = 2;
+  bytes nonce2 = 3;
+}
+
+message PreTraceWithProof {
+  PreTrace preTrace = 1;
+  TraceProof proof = 2;
+  bytes info = 3;
+  int64 startTime = 4;
+  int64 endTime = 5;
+  int32 counter = 6;
+}
+
+message Trace {
+  bytes identity = 1;
+  bytes secretKeyForIdentity = 2;
+}
+
