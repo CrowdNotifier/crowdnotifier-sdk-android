@@ -7,19 +7,21 @@ public class VenueInfo {
 	private byte[] notificationKey;
 	private Qr.QRCodeContent.VenueType venueType;
 	private byte[] masterPublicKey;
-	private Qr.EntryProof entryProof;
+	private byte[] nonce1;
+	private byte[] nonce2;
 	long validFrom;
 	long validTo;
 
 	public VenueInfo(String name, String location, String room, byte[] notificationKey, Qr.QRCodeContent.VenueType venueType,
-			byte[] masterPublicKey, Qr.EntryProof entryProof, long validFrom, long validTo) {
+			byte[] masterPublicKey, byte[] nonce1, byte[] nonce2, long validFrom, long validTo) {
 		this.name = name;
 		this.location = location;
 		this.room = room;
 		this.notificationKey = notificationKey;
 		this.venueType = venueType;
 		this.masterPublicKey = masterPublicKey;
-		this.entryProof = entryProof;
+		this.nonce1 = nonce1;
+		this.nonce2 = nonce2;
 		this.validFrom = validFrom;
 		this.validTo = validTo;
 	}
@@ -61,8 +63,12 @@ public class VenueInfo {
 		return masterPublicKey;
 	}
 
-	public Qr.EntryProof getEntryProof() {
-		return entryProof;
+	public byte[] getNonce1() {
+		return nonce1;
+	}
+
+	public byte[] getNonce2() {
+		return nonce2;
 	}
 
 	public long getValidFrom() {

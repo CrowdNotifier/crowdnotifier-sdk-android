@@ -58,6 +58,8 @@ public class MatchingTest {
 	@Test
 	public void testMatching() throws QrUtils.QRException, InvalidProtocolBufferException {
 
+		long currentTime = System.currentTimeMillis();
+
 		//Setup Health Authority
 		KeyPair haKeyPair = createHAKeyPair();
 
@@ -65,8 +67,8 @@ public class MatchingTest {
 		byte[] notificationKey = new byte[Box.SECRETKEYBYTES];
 		sodium.crypto_secretbox_keygen(notificationKey);
 
-		long qrCodeValidFrom = System.currentTimeMillis() - ONE_DAY_IN_MILLIS;
-		long qrCodeValidTo = System.currentTimeMillis() + ONE_DAY_IN_MILLIS;
+		long qrCodeValidFrom = currentTime - ONE_DAY_IN_MILLIS;
+		long qrCodeValidTo = currentTime + ONE_DAY_IN_MILLIS;
 		Location location = new Location(haKeyPair.publicKey, Qr.QRCodeContent.VenueType.OTHER, "Name", "Location",
 				"Room", notificationKey, qrCodeValidFrom, qrCodeValidTo);
 		Qr.QRCodeTrace qrTrace = location.getQrCodeTrace();
@@ -77,12 +79,13 @@ public class MatchingTest {
 		VenueInfo venueInfo =
 				CrowdNotifier.getVenueInfo(urlPrefix + "?v=2#" + Base64Util.toBase64(qrEntry.toByteArray()), urlPrefix);
 
-		CrowdNotifier.addCheckIn(System.currentTimeMillis() - ONE_HOUR_IN_MILLIS, System.currentTimeMillis() + ONE_HOUR_IN_MILLIS,
-				venueInfo, context);
+		long arrivalTime = currentTime - ONE_HOUR_IN_MILLIS;
+		long departureTime = currentTime + ONE_HOUR_IN_MILLIS;
+		CrowdNotifier.addCheckIn(arrivalTime, departureTime, venueInfo, context);
 
 		//Venue Owner Creates PreTraces
-		long exposureStart = System.currentTimeMillis() - ONE_HOUR_IN_MILLIS;
-		long exposureEnd = System.currentTimeMillis() + ONE_HOUR_IN_MILLIS;
+		long exposureStart = currentTime - ONE_HOUR_IN_MILLIS;
+		long exposureEnd = currentTime;
 		String message = "This is a message";
 		List<Qr.PreTraceWithProof> preTraceWithProofList =
 				createPreTrace(qrTrace, exposureStart, exposureEnd, notificationKey, message);
@@ -97,7 +100,8 @@ public class MatchingTest {
 					preTraceWithProof.getPreTrace().getMessage(), nonce);
 
 			publishedSKs.add(new ProblematicEventInfo(trace.getIdentity().toByteArray(),
-					trace.getSecretKeyForIdentity().toByteArray(), exposureStart, exposureEnd, encryptedMessage, nonce));
+					trace.getSecretKeyForIdentity().toByteArray(), preTraceWithProof.getStartTime(),
+					preTraceWithProof.getEndTime(), encryptedMessage, nonce));
 		}
 
 		//User matches Traces with VenueVisits stored in App
@@ -105,6 +109,8 @@ public class MatchingTest {
 
 		//Final Checks
 		assertEquals(1, exposureEvents.size());
+		assertEquals(arrivalTime, exposureEvents.get(0).getStartTime());
+		assertEquals(departureTime, exposureEvents.get(0).getEndTime());
 		assertEquals("This is a message", exposureEvents.get(0).getMessage());
 	}
 
@@ -209,43 +215,6 @@ public class MatchingTest {
 		return result;
 	}
 
-
-	/*
-	@Test
-	public void testMatchingOld() {
-		long time = System.currentTimeMillis();
-		byte[] notificationKey = Base64Util.fromBase64("HYZf4ROIMIp12Jr521JS3fttAmV4y1vATkx3MhTFB-E");
-		String message = "This is a message";
-		byte[] nonce = getRandomValue(Box.NONCEBYTES);
-		byte[] encryptedMessage = encryptMessage(notificationKey, message, nonce);
-		byte[] r1 = getRandomValue(Box.SECRETKEYBYTES);
-		byte[] r2 = getRandomValue(Box.SECRETKEYBYTES);
-		String s = "a";
-		byte[] infoBytes = getInfoBytes(s, s, s, notificationKey, Qr.QRCodeContent.VenueType.OTHER);
-		byte[] venuePublicKey = new byte[Box.PUBLICKEYBYTES];
-		byte[] venuePrivateKey = new byte[Box.SECRETKEYBYTES];
-		int result = sodium.crypto_box_seed_keypair(venuePublicKey, venuePrivateKey, hashInfo(infoBytes, r1, r2));
-		if (result != 0) { throw new RuntimeException("crypto_box_seed_keypair returned a value != 0"); }
-		VenueInfo venueInfo =
-				new VenueInfo(s, s, s, Qr.QRCodeContent.VenueType.OTHER, venuePublicKey, notificationKey, r1);
-
-		CrowdNotifier.addCheckIn(time - 2 * 60 * 60 * 1000l, time, venueInfo, context);
-
-		ArrayList<ProblematicEventInfo> problematicEvents = new ArrayList<>();
-		problematicEvents
-				.add(new ProblematicEventInfo(venuePrivateKey, time - 1 * 60 * 60 * 1000l, time - 10, encryptedMessage,
-						nonce, r2));
-
-		List<ExposureEvent> exposureEvents = CrowdNotifier.checkForMatches(problematicEvents, context);
-
-		assertEquals(1, exposureEvents.size());
-		assertEquals(time - 10, exposureEvents.get(0).getEndTime());
-		assertEquals(time - 1 * 60 * 60 * 1000l, exposureEvents.get(0).getStartTime());
-		assertEquals(message, exposureEvents.get(0).getMessage());
-	}
-
-	 */
-
 	private G2 baseG2() {
 		G2 baseG2 = new G2();
 		baseG2.setStr("1 3527010695874666181871391160110601448900299527927752" +
@@ -259,14 +228,12 @@ public class MatchingTest {
 		return baseG2;
 	}
 
-
 	private KeyPair createHAKeyPair() {
 		byte[] publicKey = new byte[Box.PUBLICKEYBYTES];
 		byte[] privateKey = new byte[Box.SECRETKEYBYTES];
 		int result = sodium.crypto_box_keypair(publicKey, privateKey);
 		return new KeyPair(publicKey, privateKey);
 	}
-
 
 	private byte[] getRandomValue(int bytes) {
 		byte[] nonce = new byte[bytes];
@@ -280,7 +247,6 @@ public class MatchingTest {
 		sodium.crypto_secretbox_easy(encrytpedMessage, messageBytes, messageBytes.length, nonce, secretKey);
 		return encrytpedMessage;
 	}
-
 
 	private KeyPairMcl keyGen() {
 		Fr privateKey = new Fr();
@@ -310,11 +276,17 @@ public class MatchingTest {
 				.setNonce2(ByteString.copyFrom(nonce2))
 				.build();
 
-		IMasterTrace masterTrace = new IMasterTrace(masterPublicKey, locationKeyPair.privateKey, qrCodeContent, nonce1, nonce2,
-				cipherTextHealthAuthority);
+		Qr.MasterTrace masterTrace = Qr.MasterTrace.newBuilder()
+				.setMasterPublicKey(ByteString.copyFrom(masterPublicKey.serialize()))
+				.setMasterSecretKeyLocation(ByteString.copyFrom(locationKeyPair.privateKey.serialize()))
+				.setInfo(qrCodeContent.toByteString())
+				.setNonce1(ByteString.copyFrom(nonce1))
+				.setNonce2(ByteString.copyFrom(nonce2))
+				.setCipherTextHealthAuthority(ByteString.copyFrom(cipherTextHealthAuthority))
+				.build();
+
 		return new ILocationData(masterPublicKey, entryProof, masterTrace);
 	}
-
 
 	private class KeyPairMcl {
 		public G2 publicKey;
@@ -343,7 +315,6 @@ public class MatchingTest {
 	private class Location {
 		byte[] healthAuthorityPublicKey;
 		Qr.QRCodeContent qrCodeContent;
-
 		ILocationData iLocationData;
 
 		public Location(byte[] healthAuthorityPublicKey, Qr.QRCodeContent.VenueType venueType, String name, String location,
@@ -375,7 +346,7 @@ public class MatchingTest {
 
 			return Qr.QRCodeTrace.newBuilder()
 					.setVersion(2)
-					.setMasterTraceRecord(iLocationData.masterTrace.toProtoMasterTrace())
+					.setMasterTraceRecord(iLocationData.masterTrace)
 					.build();
 		}
 
@@ -385,44 +356,12 @@ public class MatchingTest {
 	private class ILocationData {
 		G2 masterPublicKey;
 		Qr.EntryProof entryProof;
-		IMasterTrace masterTrace;
+		Qr.MasterTrace masterTrace;
 
-		public ILocationData(G2 masterPublicKey, Qr.EntryProof entryProof, IMasterTrace masterTrace) {
+		public ILocationData(G2 masterPublicKey, Qr.EntryProof entryProof, Qr.MasterTrace masterTrace) {
 			this.masterPublicKey = masterPublicKey;
 			this.entryProof = entryProof;
 			this.masterTrace = masterTrace;
-		}
-
-	}
-
-
-	private class IMasterTrace {
-		G2 masterPublicKey;
-		Fr masterSecretKeyLocation;
-		Qr.QRCodeContent info;
-		byte[] nonce1;
-		byte[] nonce2;
-		byte[] cipherTextHealthAuthority;
-
-		public IMasterTrace(G2 masterPublicKey, Fr masterSecretKeyLocation, Qr.QRCodeContent info, byte[] nonce1, byte[] nonce2,
-				byte[] cipherTextHealthAuthority) {
-			this.masterPublicKey = masterPublicKey;
-			this.masterSecretKeyLocation = masterSecretKeyLocation;
-			this.info = info;
-			this.nonce1 = nonce1;
-			this.nonce2 = nonce2;
-			this.cipherTextHealthAuthority = cipherTextHealthAuthority;
-		}
-
-		public Qr.MasterTrace toProtoMasterTrace() {
-			return Qr.MasterTrace.newBuilder()
-					.setMasterPublicKey(ByteString.copyFrom(masterPublicKey.serialize()))
-					.setMasterSecretKeyLocation(ByteString.copyFrom(masterSecretKeyLocation.serialize()))
-					.setInfo(info.toByteString())
-					.setNonce1(ByteString.copyFrom(nonce1))
-					.setNonce2(ByteString.copyFrom(nonce2))
-					.setCipherTextHealthAuthority(ByteString.copyFrom(cipherTextHealthAuthority))
-					.build();
 		}
 
 	}

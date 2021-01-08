@@ -120,9 +120,7 @@ public class CryptoUtils {
 			return null;
 		}
 
-		// Check that skid is in G1*
-		//TODO: check both: if (!secretKeyForIdentity.isValidOrder() || secretKeyForIdentity.isZero())
-		if (secretKeyForIdentity.isZero()) {
+		if (!secretKeyForIdentity.isValidOrder() || secretKeyForIdentity.isZero()) {
 			return null;
 		}
 		return msg_p;
@@ -164,9 +162,9 @@ public class CryptoUtils {
 
 	public byte[] generateIdentity(int hour, VenueInfo venueInfo) {
 		byte[] hash1 = crypto_hash_sha256(
-				concatenate(venueInfoToInfoBytes(venueInfo), venueInfo.getEntryProof().getNonce1().toByteArray()));
+				concatenate(venueInfoToInfoBytes(venueInfo), venueInfo.getNonce1()));
 		return crypto_hash_sha256(concatenate(hash1,
-				concatenate(String.valueOf(hour).getBytes(), venueInfo.getEntryProof().getNonce2().toByteArray())));
+				concatenate(String.valueOf(hour).getBytes(), venueInfo.getNonce2())));
 	}
 
 	private byte[] crypto_secretbox_easy(byte[] secretKey, byte[] message, byte[] nonce) {

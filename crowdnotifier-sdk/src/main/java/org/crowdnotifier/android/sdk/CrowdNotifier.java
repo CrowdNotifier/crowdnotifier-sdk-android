@@ -38,7 +38,7 @@ public class CrowdNotifier {
 
 		CryptoUtils crypto = CryptoUtils.getInstance();
 		List<EncryptedVenueVisit> encryptedVenueVisits = crypto.getEncryptedVenueVisit(arrivalTime, departureTime, venueInfo);
-		for (EncryptedVenueVisit encryptedVenueVisit : encryptedVenueVisits){
+		for (EncryptedVenueVisit encryptedVenueVisit : encryptedVenueVisits) {
 			encryptedVenueVisit.setId(id);
 		}
 		return VenueVisitStorage.getInstance(context).updateEntries(encryptedVenueVisits);
@@ -57,9 +57,8 @@ public class CrowdNotifier {
 			for (ExposureEvent match : matches) {
 				if (match.getStartTime() <= problematicEventInfo.getEndTimestamp() &&
 						match.getEndTime() >= problematicEventInfo.getStartTimestamp()) {
-					ExposureEvent newExposureEvent = new ExposureEvent(match.getId(),
-							Math.max(match.getStartTime(), problematicEventInfo.getStartTimestamp()),
-							Math.min(match.getEndTime(), problematicEventInfo.getEndTimestamp()), match.getMessage());
+					ExposureEvent newExposureEvent =
+							new ExposureEvent(match.getId(), match.getStartTime(), match.getEndTime(), match.getMessage());
 					boolean added = exposureStorage.addEntry(newExposureEvent);
 					if (added) newExposureEvents.add(newExposureEvent);
 				}
