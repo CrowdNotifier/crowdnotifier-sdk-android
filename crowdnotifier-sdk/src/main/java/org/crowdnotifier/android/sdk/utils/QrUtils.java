@@ -39,7 +39,8 @@ public class QrUtils {
 
 			return new VenueInfo(qrCode.getName(), qrCode.getLocation(), qrCode.getRoom(),
 					qrCode.getNotificationKey().toByteArray(), qrCode.getVenueType(),
-					qrCodeEntry.getMasterPublicKey().toByteArray(), qrCodeEntry.getEntryProof());
+					qrCodeEntry.getMasterPublicKey().toByteArray(), qrCodeEntry.getEntryProof(), qrCode.getValidFrom(),
+					qrCode.getValidTo());
 		} catch (InvalidProtocolBufferException e) {
 			e.printStackTrace();
 			throw new InvalidQRCodeFormatException();

@@ -8,9 +8,11 @@ public class VenueInfo {
 	private Qr.QRCodeContent.VenueType venueType;
 	private byte[] masterPublicKey;
 	private Qr.EntryProof entryProof;
+	long validFrom;
+	long validTo;
 
 	public VenueInfo(String name, String location, String room, byte[] notificationKey, Qr.QRCodeContent.VenueType venueType,
-			byte[] masterPublicKey, Qr.EntryProof entryProof) {
+			byte[] masterPublicKey, Qr.EntryProof entryProof, long validFrom, long validTo) {
 		this.name = name;
 		this.location = location;
 		this.room = room;
@@ -18,6 +20,8 @@ public class VenueInfo {
 		this.venueType = venueType;
 		this.masterPublicKey = masterPublicKey;
 		this.entryProof = entryProof;
+		this.validFrom = validFrom;
+		this.validTo = validTo;
 	}
 
 
@@ -59,6 +63,14 @@ public class VenueInfo {
 
 	public Qr.EntryProof getEntryProof() {
 		return entryProof;
+	}
+
+	public long getValidFrom() {
+		return validFrom;
+	}
+
+	public long getValidTo() {
+		return validTo;
 	}
 
 }

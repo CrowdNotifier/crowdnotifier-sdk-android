@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.goterl.lazycode.lazysodium.LazySodiumAndroid;
 import com.goterl.lazycode.lazysodium.SodiumAndroid;
 import com.goterl.lazycode.lazysodium.interfaces.Box;
@@ -17,16 +18,13 @@ import com.herumi.mcl.G1;
 import com.herumi.mcl.G2;
 import com.herumi.mcl.Mcl;
 
-import org.crowdnotifier.android.sdk.model.Qr;
-import org.crowdnotifier.android.sdk.model.VenueInfo;
+import org.crowdnotifier.android.sdk.model.*;
 import org.crowdnotifier.android.sdk.utils.CryptoUtils;
 import org.crowdnotifier.android.sdk.utils.QrUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import org.crowdnotifier.android.sdk.model.ExposureEvent;
-import org.crowdnotifier.android.sdk.model.ProblematicEventInfo;
 import org.crowdnotifier.android.sdk.storage.ExposureStorage;
 import org.crowdnotifier.android.sdk.storage.VenueVisitStorage;
 import org.crowdnotifier.android.sdk.utils.Base64Util;
@@ -58,13 +56,15 @@ public class MatchingTest {
 
 
 	@Test
-	public void testMatching() throws QrUtils.QRException {
+	public void testMatching() throws QrUtils.QRException, InvalidProtocolBufferException {
 
 		//Setup Health Authority
 		KeyPair haKeyPair = createHAKeyPair();
 
 		//Setup Location Owner
-		byte[] notificationKey = Base64Util.fromBase64("HYZf4ROIMIp12Jr521JS3fttAmV4y1vATkx3MhTFB-E");
+		byte[] notificationKey = new byte[Box.SECRETKEYBYTES];
+		sodium.crypto_secretbox_keygen(notificationKey);
+
 		long qrCodeValidFrom = System.currentTimeMillis() - ONE_DAY_IN_MILLIS;
 		long qrCodeValidTo = System.currentTimeMillis() + ONE_DAY_IN_MILLIS;
 		Location location = new Location(haKeyPair.publicKey, Qr.QRCodeContent.VenueType.OTHER, "Name", "Location",
@@ -83,16 +83,18 @@ public class MatchingTest {
 		//Venue Owner Creates PreTraces
 		long exposureStart = System.currentTimeMillis() - ONE_HOUR_IN_MILLIS;
 		long exposureEnd = System.currentTimeMillis() + ONE_HOUR_IN_MILLIS;
-		List<Qr.PreTraceWithProof> preTraceWithProofList = createPreTrace(qrTrace, qrEntry, exposureStart, exposureEnd);
+		String message = "This is a message";
+		List<Qr.PreTraceWithProof> preTraceWithProofList =
+				createPreTrace(qrTrace, exposureStart, exposureEnd, notificationKey, message);
 
 		//Health Authority generates Traces
 		List<ProblematicEventInfo> publishedSKs = new ArrayList<>();
 		for (Qr.PreTraceWithProof preTraceWithProof : preTraceWithProofList) {
-			Qr.Trace trace = createTrace(preTraceWithProof, location.qrCodeContent, haKeyPair);
+			Qr.Trace trace = createTrace(preTraceWithProof, haKeyPair);
 
-			String message = "This is a message";
 			byte[] nonce = getRandomValue(Box.NONCEBYTES);
-			byte[] encryptedMessage = encryptMessage(notificationKey, message, nonce);
+			byte[] encryptedMessage = encryptMessage(preTraceWithProof.getPreTrace().getNotificationKey().toByteArray(),
+					preTraceWithProof.getPreTrace().getMessage(), nonce);
 
 			publishedSKs.add(new ProblematicEventInfo(trace.getIdentity().toByteArray(),
 					trace.getSecretKeyForIdentity().toByteArray(), exposureStart, exposureEnd, encryptedMessage, nonce));
@@ -106,7 +108,7 @@ public class MatchingTest {
 		assertEquals("This is a message", exposureEvents.get(0).getMessage());
 	}
 
-	private Qr.Trace createTrace(Qr.PreTraceWithProof preTraceWithProof, Qr.QRCodeContent qrCodeContent, KeyPair haKeyPair) {
+	private Qr.Trace createTrace(Qr.PreTraceWithProof preTraceWithProof, KeyPair haKeyPair) throws InvalidProtocolBufferException {
 
 		Qr.PreTrace preTrace = preTraceWithProof.getPreTrace();
 		Qr.TraceProof proof = preTraceWithProof.getProof();
@@ -126,6 +128,7 @@ public class MatchingTest {
 
 		Mcl.add(secretKeyForIdentity, partialSecretKeyForIdentityOfLocation, partialSecretKeyForIdentityOfHealthAuthority);
 
+		Qr.QRCodeContent qrCodeContent = Qr.QRCodeContent.parseFrom(preTraceWithProof.getInfo());
 		byte[] identity = cryptoUtils.generateIdentity(qrCodeContent, proof.getNonce1().toByteArray(),
 				proof.getNonce2().toByteArray(), preTraceWithProof.getCounter());
 		if (!Arrays.equals(preTrace.getIdentity().toByteArray(), identity)) {
@@ -133,9 +136,13 @@ public class MatchingTest {
 		}
 
 		//verifyTrace
-		//TODO verify Trace
-
-		//cryptoUtils.generateIdentity(preTraceWithProof.getPreTrace().)
+		int NONCE_LENGTH = 32;
+		byte[] msg_orig = getRandomValue(NONCE_LENGTH);
+		G2 masterPublicKey = new G2();
+		masterPublicKey.deserialize(proof.getMasterPublicKey().toByteArray());
+		EncryptedData encryptedData = cryptoUtils.encryptInternal(msg_orig, identity, masterPublicKey);
+		byte[] msg_dec = cryptoUtils.decryptInternal(encryptedData, secretKeyForIdentity, identity);
+		if (msg_dec == null) throw new RuntimeException("Health Authority could not verify Trace");
 
 		return Qr.Trace.newBuilder()
 				.setIdentity(preTrace.getIdentity())
@@ -143,8 +150,8 @@ public class MatchingTest {
 				.build();
 	}
 
-	private List<Qr.PreTraceWithProof> createPreTrace(Qr.QRCodeTrace qrCodeTrace, Qr.QRCodeEntry qrCodeEntry, long startTime,
-			long endTime) {
+	private List<Qr.PreTraceWithProof> createPreTrace(Qr.QRCodeTrace qrCodeTrace, long startTime, long endTime,
+			byte[] notificationKey, String message) throws InvalidProtocolBufferException {
 
 		Qr.MasterTrace masterTraceRecord = qrCodeTrace.getMasterTraceRecord();
 		G2 masterPublicKey = new G2();
@@ -157,9 +164,10 @@ public class MatchingTest {
 		ArrayList<Integer> affectedHours = cryptoUtils.getAffectedHours(startTime, endTime);
 		for (Integer hour : affectedHours) {
 
-			byte[] identity = cryptoUtils.generateIdentity(qrCodeEntry.getData(),
-					qrCodeEntry.getEntryProof().getNonce1().toByteArray(),
-					qrCodeEntry.getEntryProof().getNonce2().toByteArray(), hour);
+			byte[] identity =
+					cryptoUtils.generateIdentity(Qr.QRCodeContent.parseFrom(qrCodeTrace.getMasterTraceRecord().getInfo()),
+							qrCodeTrace.getMasterTraceRecord().getNonce1().toByteArray(),
+							qrCodeTrace.getMasterTraceRecord().getNonce2().toByteArray(), hour);
 
 			G1 partialSecretKeyForIdentityOfLocation = keyDer(masterSecretKeyLocation, identity);
 
@@ -168,6 +176,8 @@ public class MatchingTest {
 					.setCipherTextHealthAuthority(masterTraceRecord.getCipherTextHealthAuthority())
 					.setPartialSecretKeyForIdentityOfLocation(
 							ByteString.copyFrom(partialSecretKeyForIdentityOfLocation.serialize()))
+					.setNotificationKey(ByteString.copyFrom(notificationKey))
+					.setMessage(message)
 					.build();
 
 			Qr.TraceProof traceProof = Qr.TraceProof.newBuilder()

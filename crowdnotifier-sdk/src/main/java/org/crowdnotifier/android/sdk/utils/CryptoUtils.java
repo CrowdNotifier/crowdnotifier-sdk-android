@@ -46,40 +46,20 @@ public class CryptoUtils {
 		masterPublicKey.deserialize(venueInfo.getMasterPublicKey());
 
 		//scan
-		ArrayList<EncryptedVenueVisit> encryptedVenueVisits = new ArrayList();
+		ArrayList<EncryptedVenueVisit> encryptedVenueVisits = new ArrayList<>();
 
 		ArrayList<Integer> hourCounters = getAffectedHours(arrivalTime, departureTime);
 		for (Integer hour : hourCounters) {
 
 			byte[] identity = generateIdentity(hour, venueInfo);
 
-			byte[] nonceX = randombytes_buf();
+			byte[] message =
+					(new Gson().toJson(new Payload(arrivalTime, departureTime, venueInfo.getNotificationKey()))).getBytes();
 
-			byte[] aux = (new Gson().toJson(new Payload(arrivalTime, departureTime, venueInfo.getNotificationKey()))).getBytes();
-
-			Fr r = new Fr();
-			r.setHashOf(concatenate(nonceX, concatenate(identity, aux)));
-
-			G2 c1 = new G2();
-			Mcl.mul(c1, baseG2(), r);
-
-			G1 g1_temp = new G1();
-			Mcl.hashAndMapToG1(g1_temp, identity);
-
-			GT gt1_temp = new GT();
-			Mcl.pairing(gt1_temp, g1_temp, masterPublicKey);
-
-			GT gt_temp = new GT();
-			Mcl.pow(gt_temp, gt1_temp, r);
-
-			byte[] c2_pair = crypto_hash_sha256(gt_temp.serialize());
-			byte[] c2 = xor(nonceX, c2_pair);
-
-			byte[] nonce = randombytes_buf();
-
-			byte[] c3 = crypto_secretbox_easy(crypto_hash_sha256(nonceX), aux, nonce);
-
-			encryptedVenueVisits.add(new EncryptedVenueVisit(0, new DayDate(departureTime), c1.serialize(), c2, c3, nonce));
+			EncryptedData encryptedData = encryptInternal(message, identity, masterPublicKey);
+			encryptedVenueVisits
+					.add(new EncryptedVenueVisit(0, new DayDate(departureTime), encryptedData.getC1(), encryptedData.getC2(),
+							encryptedData.getC3(), encryptedData.getNonce()));
 		}
 
 		return encryptedVenueVisits;
@@ -94,36 +74,10 @@ public class CryptoUtils {
 			G1 secretKeyForIdentity = new G1();
 			secretKeyForIdentity.deserialize(eventInfo.getSecretKeyForIdentity());
 
-			G2 c1 = new G2();
-			c1.deserialize(venueVisit.getC1());
-
-			GT gt_temp = new GT();
-			Mcl.pairing(gt_temp, secretKeyForIdentity, c1);
-
-			byte[] hash = crypto_hash_sha256(gt_temp.serialize());
-			byte[] x_p = xor(venueVisit.getC2(), hash);
-
-			byte[] msg_p = new byte[venueVisit.getC3().length - Box.MACBYTES];
-			int result = sodium.crypto_secretbox_open_easy(msg_p, venueVisit.getC3(), venueVisit.getC3().length, venueVisit.getNonce(), crypto_hash_sha256(x_p));
-			if (result != 0) continue;
-			//byte[] msg_p = crypto_secretbox_open_easy(crypto_hash_sha256(x_p), venueVisit.getC3(), venueVisit.getNonce());
-
-			//Additional verification
-			Fr r_p = new Fr();
-			r_p.setHashOf(concatenate(x_p, concatenate(eventInfo.getIdentity(), msg_p)));
-
-			G2 c1_p = new G2();
-			Mcl.mul(c1_p, baseG2(), r_p);
-
-			if (!c1.equals(c1_p)) {
-				continue;
-			}
-
-			// Check that skid is in G1*
-			//TODO: check both: if (!secretKeyForIdentity.isValidOrder() || secretKeyForIdentity.isZero())
-			if (secretKeyForIdentity.isZero()) {
-				continue;
-			}
+			byte[] msg_p = decryptInternal(
+					new EncryptedData(venueVisit.getC1(), venueVisit.getC2(), venueVisit.getC3(), venueVisit.getNonce()),
+					secretKeyForIdentity, eventInfo.getIdentity());
+			if (msg_p == null) continue;
 
 			Payload payload = new Gson().fromJson(new String(msg_p), Payload.class);
 
@@ -140,15 +94,71 @@ public class CryptoUtils {
 		return exposureEvents;
 	}
 
+	public byte[] decryptInternal(EncryptedData encryptedData, G1 secretKeyForIdentity, byte[] identity) {
+		G2 c1 = new G2();
+		c1.deserialize(encryptedData.getC1());
+
+		GT gt_temp = new GT();
+		Mcl.pairing(gt_temp, secretKeyForIdentity, c1);
+
+		byte[] hash = crypto_hash_sha256(gt_temp.serialize());
+		byte[] x_p = xor(encryptedData.getC2(), hash);
+
+		byte[] msg_p = new byte[encryptedData.getC3().length - Box.MACBYTES];
+		int result = sodium.crypto_secretbox_open_easy(msg_p, encryptedData.getC3(), encryptedData.getC3().length,
+				encryptedData.getNonce(), crypto_hash_sha256(x_p));
+		if (result != 0) return null;
+
+		//Additional verification
+		Fr r_p = new Fr();
+		r_p.setHashOf(concatenate(x_p, concatenate(identity, msg_p)));
+
+		G2 c1_p = new G2();
+		Mcl.mul(c1_p, baseG2(), r_p);
+
+		if (!c1.equals(c1_p)) {
+			return null;
+		}
+
+		// Check that skid is in G1*
+		//TODO: check both: if (!secretKeyForIdentity.isValidOrder() || secretKeyForIdentity.isZero())
+		if (secretKeyForIdentity.isZero()) {
+			return null;
+		}
+		return msg_p;
+	}
+
+	public EncryptedData encryptInternal(byte[] message, byte[] identity, G2 masterPublicKey) {
+
+		byte[] nonceX = randombytes_buf();
+
+		Fr r = new Fr();
+		r.setHashOf(concatenate(nonceX, concatenate(identity, message)));
+
+		G2 c1 = new G2();
+		Mcl.mul(c1, baseG2(), r);
+
+		G1 g1_temp = new G1();
+		Mcl.hashAndMapToG1(g1_temp, identity);
+
+		GT gt1_temp = new GT();
+		Mcl.pairing(gt1_temp, g1_temp, masterPublicKey);
+
+		GT gt_temp = new GT();
+		Mcl.pow(gt_temp, gt1_temp, r);
+
+		byte[] c2_pair = crypto_hash_sha256(gt_temp.serialize());
+		byte[] c2 = xor(nonceX, c2_pair);
+
+		byte[] nonce = randombytes_buf();
+
+		byte[] c3 = crypto_secretbox_easy(crypto_hash_sha256(nonceX), message, nonce);
+
+		return new EncryptedData(c1.serialize(), c2, c3, nonce);
+	}
+
 	public byte[] generateIdentity(Qr.QRCodeContent qrCodeContent, byte[] nonce1, byte[] nonce2, int hour) {
-		Qr.QRCodeContent qrCodeContent1 = Qr.QRCodeContent.newBuilder()
-				.setName(qrCodeContent.getName())
-				.setLocation(qrCodeContent.getLocation())
-				.setRoom(qrCodeContent.getRoom())
-				.setVenueType(qrCodeContent.getVenueType())
-				.setNotificationKey(qrCodeContent.getNotificationKey())
-				.build();
-		byte[] hash1 = crypto_hash_sha256(concatenate(qrCodeContent1.toByteArray(), nonce1));
+		byte[] hash1 = crypto_hash_sha256(concatenate(qrCodeContent.toByteArray(), nonce1));
 		return crypto_hash_sha256(concatenate(hash1, concatenate(String.valueOf(hour).getBytes(), nonce2)));
 	}
 
@@ -213,6 +223,8 @@ public class CryptoUtils {
 				.setRoom(venueInfo.getRoom())
 				.setVenueType(venueInfo.getVenueType())
 				.setNotificationKey(ByteString.copyFrom(venueInfo.getNotificationKey()))
+				.setValidFrom(venueInfo.getValidFrom())
+				.setValidTo(venueInfo.getValidTo())
 				.build();
 		return qrCodeContent.toByteArray();
 	}
