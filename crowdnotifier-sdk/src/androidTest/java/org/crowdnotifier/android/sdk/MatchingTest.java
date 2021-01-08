@@ -4,8 +4,6 @@ import android.content.Context;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -22,6 +20,7 @@ import com.herumi.mcl.Mcl;
 import org.crowdnotifier.android.sdk.model.Qr;
 import org.crowdnotifier.android.sdk.model.VenueInfo;
 import org.crowdnotifier.android.sdk.utils.CryptoUtils;
+import org.crowdnotifier.android.sdk.utils.QrUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -40,6 +39,8 @@ public class MatchingTest {
 	private Context context;
 	private SodiumAndroid sodium;
 	private CryptoUtils cryptoUtils;
+	private static final long ONE_DAY_IN_MILLIS = 24 * 60 * 60 * 1000L;
+	private static final long ONE_HOUR_IN_MILLIS = 60 * 60 * 1000L;
 
 
 	@Before
@@ -57,38 +58,44 @@ public class MatchingTest {
 
 
 	@Test
-	public void testMatching() {
+	public void testMatching() throws QrUtils.QRException {
 
 		//Setup Health Authority
 		KeyPair haKeyPair = createHAKeyPair();
 
 		//Setup Location Owner
 		byte[] notificationKey = Base64Util.fromBase64("HYZf4ROIMIp12Jr521JS3fttAmV4y1vATkx3MhTFB-E");
-		Location location =
-				new Location(haKeyPair.publicKey, Qr.QRCodeContent.VenueType.OTHER, "Name", "Location", "Room", notificationKey);
+		long qrCodeValidFrom = System.currentTimeMillis() - ONE_DAY_IN_MILLIS;
+		long qrCodeValidTo = System.currentTimeMillis() + ONE_DAY_IN_MILLIS;
+		Location location = new Location(haKeyPair.publicKey, Qr.QRCodeContent.VenueType.OTHER, "Name", "Location",
+				"Room", notificationKey, qrCodeValidFrom, qrCodeValidTo);
 		Qr.QRCodeTrace qrTrace = location.getQrCodeTrace();
-
-		String s = "a";
-		VenueInfo venueInfo = new VenueInfo(s, s, s, notificationKey, Qr.QRCodeContent.VenueType.OTHER,
-				location.iLocationData.masterPublicKey.serialize(), location.iLocationData.entryProof);
+		Qr.QRCodeEntry qrEntry = location.getQrCodeEntry();
 
 		//User checks in with App
-		CrowdNotifier.addCheckIn(0, 1000, venueInfo, context);
+		String urlPrefix = "https://test.com";
+		VenueInfo venueInfo =
+				CrowdNotifier.getVenueInfo(urlPrefix + "?v=2#" + Base64Util.toBase64(qrEntry.toByteArray()), urlPrefix);
+
+		CrowdNotifier.addCheckIn(System.currentTimeMillis() - ONE_HOUR_IN_MILLIS, System.currentTimeMillis() + ONE_HOUR_IN_MILLIS,
+				venueInfo, context);
 
 		//Venue Owner Creates PreTraces
-		List<Qr.PreTraceWithProof> preTraceWithProofList = createPreTrace(qrTrace, 0, 1000, venueInfo);
+		long exposureStart = System.currentTimeMillis() - ONE_HOUR_IN_MILLIS;
+		long exposureEnd = System.currentTimeMillis() + ONE_HOUR_IN_MILLIS;
+		List<Qr.PreTraceWithProof> preTraceWithProofList = createPreTrace(qrTrace, qrEntry, exposureStart, exposureEnd);
 
 		//Health Authority generates Traces
 		List<ProblematicEventInfo> publishedSKs = new ArrayList<>();
 		for (Qr.PreTraceWithProof preTraceWithProof : preTraceWithProofList) {
-			Qr.Trace trace = createTrace(preTraceWithProof, location.qrCodeContent, haKeyPair, venueInfo);
+			Qr.Trace trace = createTrace(preTraceWithProof, location.qrCodeContent, haKeyPair);
 
 			String message = "This is a message";
 			byte[] nonce = getRandomValue(Box.NONCEBYTES);
 			byte[] encryptedMessage = encryptMessage(notificationKey, message, nonce);
 
 			publishedSKs.add(new ProblematicEventInfo(trace.getIdentity().toByteArray(),
-					trace.getSecretKeyForIdentity().toByteArray(), 4, 100, encryptedMessage, nonce));
+					trace.getSecretKeyForIdentity().toByteArray(), exposureStart, exposureEnd, encryptedMessage, nonce));
 		}
 
 		//User matches Traces with VenueVisits stored in App
@@ -99,7 +106,7 @@ public class MatchingTest {
 		assertEquals("This is a message", exposureEvents.get(0).getMessage());
 	}
 
-	private Qr.Trace createTrace(Qr.PreTraceWithProof preTraceWithProof, Qr.QRCodeContent qrCodeContent, KeyPair haKeyPair, VenueInfo venueInfo) {
+	private Qr.Trace createTrace(Qr.PreTraceWithProof preTraceWithProof, Qr.QRCodeContent qrCodeContent, KeyPair haKeyPair) {
 
 		Qr.PreTrace preTrace = preTraceWithProof.getPreTrace();
 		Qr.TraceProof proof = preTraceWithProof.getProof();
@@ -119,13 +126,8 @@ public class MatchingTest {
 
 		Mcl.add(secretKeyForIdentity, partialSecretKeyForIdentityOfLocation, partialSecretKeyForIdentityOfHealthAuthority);
 
-		byte[] identity = cryptoUtils.generateIdentity(preTraceWithProof.getCounter(), venueInfo);
-
-		/*
 		byte[] identity = cryptoUtils.generateIdentity(qrCodeContent, proof.getNonce1().toByteArray(),
 				proof.getNonce2().toByteArray(), preTraceWithProof.getCounter());
-
-		 */
 		if (!Arrays.equals(preTrace.getIdentity().toByteArray(), identity)) {
 			return null;
 		}
@@ -141,9 +143,8 @@ public class MatchingTest {
 				.build();
 	}
 
-	//TODO remove VenueInfo and get necessary info from qrCodeTrace
-	private List<Qr.PreTraceWithProof> createPreTrace(Qr.QRCodeTrace qrCodeTrace, long startTime, long endTime,
-			VenueInfo venueInfo) {
+	private List<Qr.PreTraceWithProof> createPreTrace(Qr.QRCodeTrace qrCodeTrace, Qr.QRCodeEntry qrCodeEntry, long startTime,
+			long endTime) {
 
 		Qr.MasterTrace masterTraceRecord = qrCodeTrace.getMasterTraceRecord();
 		G2 masterPublicKey = new G2();
@@ -156,7 +157,9 @@ public class MatchingTest {
 		ArrayList<Integer> affectedHours = cryptoUtils.getAffectedHours(startTime, endTime);
 		for (Integer hour : affectedHours) {
 
-			byte[] identity = cryptoUtils.generateIdentity(hour, venueInfo);
+			byte[] identity = cryptoUtils.generateIdentity(qrCodeEntry.getData(),
+					qrCodeEntry.getEntryProof().getNonce1().toByteArray(),
+					qrCodeEntry.getEntryProof().getNonce2().toByteArray(), hour);
 
 			G1 partialSecretKeyForIdentityOfLocation = keyDer(masterSecretKeyLocation, identity);
 
@@ -261,49 +264,11 @@ public class MatchingTest {
 		return nonce;
 	}
 
-	private byte[] hashInfo(byte[] infoBytes, byte[] r1, byte[] r2) {
-
-		byte[] infoConcatR1 = concatenate(infoBytes, r1);
-		byte[] h1 = new byte[32];
-		int result = sodium.crypto_hash_sha256(h1, infoConcatR1, infoConcatR1.length);
-		if (result != 0) { throw new RuntimeException("crypto_hash_sha256 returned a value != 0"); }
-
-		byte[] h1ConcatR2 = concatenate(h1, r2);
-		byte[] seed = new byte[32];
-		result = sodium.crypto_hash_sha256(seed, h1ConcatR2, h1ConcatR2.length);
-		if (result != 0) { throw new RuntimeException("crypto_hash_sha256 returned a value != 0"); }
-
-		return seed;
-	}
-
 	private byte[] encryptMessage(byte[] secretKey, String message, byte[] nonce) {
 		byte[] messageBytes = message.getBytes();
 		byte[] encrytpedMessage = new byte[messageBytes.length + Box.MACBYTES];
 		sodium.crypto_secretbox_easy(encrytpedMessage, messageBytes, messageBytes.length, nonce, secretKey);
 		return encrytpedMessage;
-	}
-
-	private byte[] getInfoBytes(String name, String location, String room, byte[] notificationKey,
-			Qr.QRCodeContent.VenueType venueType) {
-		Qr.QRCodeContent qrCodeContent = Qr.QRCodeContent.newBuilder()
-				.setName(name)
-				.setLocation(location)
-				.setRoom(room)
-				.setNotificationKey(ByteString.copyFrom(notificationKey))
-				.setVenueType(venueType)
-				.build();
-		return qrCodeContent.toByteArray();
-	}
-
-	private byte[] concatenate(byte[] a, byte[] b) {
-		try {
-			ByteArrayOutputStream outputStream = new ByteArrayOutputStream(a.length + b.length);
-			outputStream.write(a);
-			outputStream.write(b);
-			return outputStream.toByteArray();
-		} catch (IOException e) {
-			throw new RuntimeException("Byte array concatenation failed");
-		}
 	}
 
 
@@ -372,7 +337,7 @@ public class MatchingTest {
 		ILocationData iLocationData;
 
 		public Location(byte[] healthAuthorityPublicKey, Qr.QRCodeContent.VenueType venueType, String name, String location,
-				String room, byte[] notificationKey) {
+				String room, byte[] notificationKey, long validFrom, long validTo) {
 			this.healthAuthorityPublicKey = healthAuthorityPublicKey;
 			this.qrCodeContent = Qr.QRCodeContent.newBuilder()
 					.setVenueType(venueType)
@@ -380,12 +345,19 @@ public class MatchingTest {
 					.setLocation(location)
 					.setRoom(room)
 					.setNotificationKey(ByteString.copyFrom(notificationKey))
+					.setValidFrom(validFrom)
+					.setValidTo(validTo)
 					.build();
 			this.iLocationData = genCode(healthAuthorityPublicKey, qrCodeContent);
 		}
 
 		public Qr.QRCodeEntry getQrCodeEntry() {
-			return null;
+			return Qr.QRCodeEntry.newBuilder()
+					.setData(qrCodeContent)
+					.setEntryProof(iLocationData.entryProof)
+					.setMasterPublicKey(ByteString.copyFrom(iLocationData.masterPublicKey.serialize()))
+					.setVersion(2)
+					.build();
 		}
 
 

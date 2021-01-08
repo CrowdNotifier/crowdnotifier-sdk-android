@@ -103,7 +103,10 @@ public class CryptoUtils {
 			byte[] hash = crypto_hash_sha256(gt_temp.serialize());
 			byte[] x_p = xor(venueVisit.getC2(), hash);
 
-			byte[] msg_p = crypto_secretbox_open_easy(crypto_hash_sha256(x_p), venueVisit.getC3(), venueVisit.getNonce());
+			byte[] msg_p = new byte[venueVisit.getC3().length - Box.MACBYTES];
+			int result = sodium.crypto_secretbox_open_easy(msg_p, venueVisit.getC3(), venueVisit.getC3().length, venueVisit.getNonce(), crypto_hash_sha256(x_p));
+			if (result != 0) continue;
+			//byte[] msg_p = crypto_secretbox_open_easy(crypto_hash_sha256(x_p), venueVisit.getC3(), venueVisit.getNonce());
 
 			//Additional verification
 			Fr r_p = new Fr();
@@ -138,7 +141,14 @@ public class CryptoUtils {
 	}
 
 	public byte[] generateIdentity(Qr.QRCodeContent qrCodeContent, byte[] nonce1, byte[] nonce2, int hour) {
-		byte[] hash1 = crypto_hash_sha256(concatenate(qrCodeContent.toByteArray(), nonce1));
+		Qr.QRCodeContent qrCodeContent1 = Qr.QRCodeContent.newBuilder()
+				.setName(qrCodeContent.getName())
+				.setLocation(qrCodeContent.getLocation())
+				.setRoom(qrCodeContent.getRoom())
+				.setVenueType(qrCodeContent.getVenueType())
+				.setNotificationKey(qrCodeContent.getNotificationKey())
+				.build();
+		byte[] hash1 = crypto_hash_sha256(concatenate(qrCodeContent1.toByteArray(), nonce1));
 		return crypto_hash_sha256(concatenate(hash1, concatenate(String.valueOf(hour).getBytes(), nonce2)));
 	}
 
@@ -201,8 +211,8 @@ public class CryptoUtils {
 				.setName(venueInfo.getName())
 				.setLocation(venueInfo.getLocation())
 				.setRoom(venueInfo.getRoom())
-				.setNotificationKey(ByteString.copyFrom(venueInfo.getNotificationKey()))
 				.setVenueType(venueInfo.getVenueType())
+				.setNotificationKey(ByteString.copyFrom(venueInfo.getNotificationKey()))
 				.build();
 		return qrCodeContent.toByteArray();
 	}

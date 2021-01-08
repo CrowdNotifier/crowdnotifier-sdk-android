@@ -36,14 +36,12 @@ public class CrowdNotifier {
 
 	public static boolean updateCheckIn(long id, long arrivalTime, long departureTime, VenueInfo venueInfo, Context context) {
 
-		/*
 		CryptoUtils crypto = CryptoUtils.getInstance();
-		EncryptedVenueVisit encryptedVenueVisit = crypto.getEncryptedVenueVisit(arrivalTime, departureTime, venueInfo);
-		encryptedVenueVisit.setId(id);
-		return VenueVisitStorage.getInstance(context).updateEntry(encryptedVenueVisit);
-		 */
-		//TODO
-		return false;
+		List<EncryptedVenueVisit> encryptedVenueVisits = crypto.getEncryptedVenueVisit(arrivalTime, departureTime, venueInfo);
+		for (EncryptedVenueVisit encryptedVenueVisit : encryptedVenueVisits){
+			encryptedVenueVisit.setId(id);
+		}
+		return VenueVisitStorage.getInstance(context).updateEntries(encryptedVenueVisits);
 	}
 
 	public static List<ExposureEvent> checkForMatches(List<ProblematicEventInfo> publishedSKs, Context context) {

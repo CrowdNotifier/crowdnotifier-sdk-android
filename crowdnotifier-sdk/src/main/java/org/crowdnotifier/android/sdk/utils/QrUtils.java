@@ -11,7 +11,7 @@ import static android.util.Base64.NO_PADDING;
 
 public class QrUtils {
 
-	private static final String QR_CODE_VERSION = "1";
+	private static final String QR_CODE_VERSION = "2";
 
 	public static VenueInfo getQrInfo(String qrCodeString, String expectedQrCodePrefix) throws QRException {
 
@@ -30,6 +30,13 @@ public class QrUtils {
 			Qr.QRCodeEntry qrCodeEntry = Qr.QRCodeEntry.parseFrom(decoded);
 			Qr.QRCodeContent qrCode = qrCodeEntry.getData();
 
+			if (System.currentTimeMillis() < qrCode.getValidFrom()) {
+				throw new NotYetValidException();
+			}
+			if (System.currentTimeMillis() > qrCode.getValidTo()) {
+				throw new NotValidAnymoreException();
+			}
+
 			return new VenueInfo(qrCode.getName(), qrCode.getLocation(), qrCode.getRoom(),
 					qrCode.getNotificationKey().toByteArray(), qrCode.getVenueType(),
 					qrCodeEntry.getMasterPublicKey().toByteArray(), qrCodeEntry.getEntryProof());
@@ -40,6 +47,12 @@ public class QrUtils {
 	}
 
 	public static class QRException extends Exception { }
+
+
+	public static class NotYetValidException extends QRException { }
+
+
+	public static class NotValidAnymoreException extends QRException { }
 
 
 	public static class InvalidQRCodeFormatException extends QRException { }

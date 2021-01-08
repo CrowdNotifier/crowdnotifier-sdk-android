@@ -27,6 +27,8 @@ message QRCodeContent {
   }
   VenueType venueType = 4;
   bytes notificationKey = 5;
+  uint64 validFrom = 6;
+  uint64 validTo = 7;
 }
 
 message EntryProof {
@@ -52,6 +54,8 @@ message PreTrace {
   bytes identity = 1;
   bytes partialSecretKeyForIdentityOfLocation = 2;
   bytes cipherTextHealthAuthority = 3;
+  string message = 4;
+  bytes notificationKey = 5;
 }
 
 message TraceProof {

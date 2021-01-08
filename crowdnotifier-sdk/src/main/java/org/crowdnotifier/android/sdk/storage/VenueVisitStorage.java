@@ -64,12 +64,13 @@ public class VenueVisitStorage {
 		return newId;
 	}
 
-	public boolean updateEntry(EncryptedVenueVisit newVenueVisit) {
+	public boolean updateEntries(List<EncryptedVenueVisit> newVenueVisits) {
+		if (newVenueVisits == null || newVenueVisits.isEmpty()) return false;
 		List<EncryptedVenueVisit> venueVisitList = getEntries();
-		EncryptedVenueVisit oldEntry = getVenueVisitWithId(venueVisitList, newVenueVisit.getId());
-		if (oldEntry == null) return false;
-		venueVisitList.remove(oldEntry);
-		venueVisitList.add(newVenueVisit);
+		List<EncryptedVenueVisit> oldEntries = getVenueVisitsWithId(venueVisitList, newVenueVisits.get(0).getId());
+		if (oldEntries.isEmpty()) return false;
+		venueVisitList.removeAll(oldEntries);
+		venueVisitList.addAll(newVenueVisits);
 		saveToPrefs(venueVisitList);
 		return true;
 	}
@@ -101,13 +102,14 @@ public class VenueVisitStorage {
 		return maxId;
 	}
 
-	private EncryptedVenueVisit getVenueVisitWithId(List<EncryptedVenueVisit> venueVisitList, long id) {
+	private List<EncryptedVenueVisit> getVenueVisitsWithId(List<EncryptedVenueVisit> venueVisitList, long id) {
+		ArrayList<EncryptedVenueVisit> result = new ArrayList<>();
 		for (EncryptedVenueVisit venueVisit : venueVisitList) {
 			if (venueVisit.getId() == id) {
-				return venueVisit;
+				result.add(venueVisit);
 			}
 		}
-		return null;
+		return result;
 	}
 
 	private void saveToPrefs(List<EncryptedVenueVisit> venueVisitList) {
