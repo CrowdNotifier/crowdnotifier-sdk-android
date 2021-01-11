@@ -21,7 +21,7 @@ import org.crowdnotifier.android.sdk.model.EncryptedVenueVisit;
 public class VenueVisitStorage {
 
 	private static final String KEY_CROWDNOTIFIER_STORE = "KEY_CROWDNOTIFIER_STORE";
-	private static final String KEY_VENUE_VISITS = "KEY_VENUE_VISITS";
+	private static final String KEY_VENUE_VISITS = "KEY_VENUE_VISITS_V2";
 	private static final Type VENUE_LIST_TYPE = new TypeToken<ArrayList<EncryptedVenueVisit>>() { }.getType();
 
 	private static VenueVisitStorage instance;
