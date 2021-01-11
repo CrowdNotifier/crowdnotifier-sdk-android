@@ -37,6 +37,7 @@ public class MatchingTest {
 	private Context context;
 	private SodiumAndroid sodium;
 	private CryptoUtils cryptoUtils;
+	KeyPair haKeyPair;
 	private static final long ONE_DAY_IN_MILLIS = 24 * 60 * 60 * 1000L;
 	private static final long ONE_HOUR_IN_MILLIS = 60 * 60 * 1000L;
 
@@ -52,6 +53,9 @@ public class MatchingTest {
 		System.loadLibrary("mcljava");
 		Mcl.SystemInit(Mcl.BLS12_381);
 		cryptoUtils = CryptoUtils.getInstance();
+
+		//Setup Health Authority
+		haKeyPair = createHAKeyPair();
 	}
 
 
@@ -59,9 +63,51 @@ public class MatchingTest {
 	public void testMatching() throws QrUtils.QRException, InvalidProtocolBufferException {
 
 		long currentTime = System.currentTimeMillis();
+		long arrivalTime = currentTime - ONE_HOUR_IN_MILLIS;
+		long departureTime = currentTime + ONE_HOUR_IN_MILLIS;
+		long exposureStart = currentTime - ONE_HOUR_IN_MILLIS;
+		long exposureEnd = currentTime;
+		String exposureMessage = "This is a message.";
 
-		//Setup Health Authority
-		KeyPair haKeyPair = createHAKeyPair();
+		// Sets up location owner, adds User-Check-In, generates PreTraces and Traces and returns a list of ProblematicEventInfos
+		List<ProblematicEventInfo> publishedSKs =
+				generateVisitAndExposure(arrivalTime, departureTime, exposureStart, exposureEnd, exposureMessage);
+
+		//User matches Traces with VenueVisits stored in App
+		List<ExposureEvent> exposureEvents = CrowdNotifier.checkForMatches(publishedSKs, context);
+
+		//Final Checks
+		assertEquals(1, exposureEvents.size());
+		assertEquals(arrivalTime, exposureEvents.get(0).getStartTime());
+		assertEquals(departureTime, exposureEvents.get(0).getEndTime());
+		assertEquals(exposureMessage, exposureEvents.get(0).getMessage());
+	}
+
+	@Test
+	public void testNoMatching() throws QrUtils.QRException, InvalidProtocolBufferException {
+
+		long currentTime = System.currentTimeMillis();
+		long arrivalTime = currentTime - ONE_HOUR_IN_MILLIS;
+		long departureTime = currentTime + ONE_HOUR_IN_MILLIS;
+		long exposureStart = currentTime - 2 * ONE_HOUR_IN_MILLIS;
+		long exposureEnd = currentTime - ONE_HOUR_IN_MILLIS - 1;
+		String exposureMessage = "This is a message.";
+
+		// Sets up location owner, adds User-Check-In, generates PreTraces and Traces and returns a list of ProblematicEventInfos
+		List<ProblematicEventInfo> publishedSKs =
+				generateVisitAndExposure(arrivalTime, departureTime, exposureStart, exposureEnd, exposureMessage);
+
+		//User matches Traces with VenueVisits stored in App
+		List<ExposureEvent> exposureEvents = CrowdNotifier.checkForMatches(publishedSKs, context);
+
+		//Final Check
+		assertEquals(0, exposureEvents.size());
+	}
+
+
+	private List<ProblematicEventInfo> generateVisitAndExposure(long arrivalTime, long departureTime, long exposureStart,
+			long exposureEnd, String message) throws QrUtils.QRException, InvalidProtocolBufferException {
+		long currentTime = System.currentTimeMillis();
 
 		//Setup Location Owner
 		byte[] notificationKey = new byte[Box.SECRETKEYBYTES];
@@ -79,14 +125,9 @@ public class MatchingTest {
 		VenueInfo venueInfo =
 				CrowdNotifier.getVenueInfo(urlPrefix + "?v=2#" + Base64Util.toBase64(qrEntry.toByteArray()), urlPrefix);
 
-		long arrivalTime = currentTime - ONE_HOUR_IN_MILLIS;
-		long departureTime = currentTime + ONE_HOUR_IN_MILLIS;
 		CrowdNotifier.addCheckIn(arrivalTime, departureTime, venueInfo, context);
 
 		//Venue Owner Creates PreTraces
-		long exposureStart = currentTime - ONE_HOUR_IN_MILLIS;
-		long exposureEnd = currentTime;
-		String message = "This is a message";
 		List<Backend.PreTraceWithProof> preTraceWithProofList =
 				createPreTrace(qrTrace, exposureStart, exposureEnd, notificationKey, message);
 
@@ -103,18 +144,12 @@ public class MatchingTest {
 					trace.getSecretKeyForIdentity().toByteArray(), preTraceWithProof.getStartTime(),
 					preTraceWithProof.getEndTime(), encryptedMessage, nonce));
 		}
-
-		//User matches Traces with VenueVisits stored in App
-		List<ExposureEvent> exposureEvents = CrowdNotifier.checkForMatches(publishedSKs, context);
-
-		//Final Checks
-		assertEquals(1, exposureEvents.size());
-		assertEquals(arrivalTime, exposureEvents.get(0).getStartTime());
-		assertEquals(departureTime, exposureEvents.get(0).getEndTime());
-		assertEquals("This is a message", exposureEvents.get(0).getMessage());
+		return publishedSKs;
 	}
 
-	private Backend.Trace createTrace(Backend.PreTraceWithProof preTraceWithProof, KeyPair haKeyPair) throws InvalidProtocolBufferException {
+
+	private Backend.Trace createTrace(Backend.PreTraceWithProof preTraceWithProof, KeyPair haKeyPair)
+			throws InvalidProtocolBufferException {
 
 		Backend.PreTrace preTrace = preTraceWithProof.getPreTrace();
 		Backend.TraceProof proof = preTraceWithProof.getProof();
