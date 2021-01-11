@@ -57,9 +57,9 @@ public class CryptoUtils {
 					(new Gson().toJson(new Payload(arrivalTime, departureTime, venueInfo.getNotificationKey()))).getBytes();
 
 			EncryptedData encryptedData = encryptInternal(message, identity, masterPublicKey);
-			encryptedVenueVisits
-					.add(new EncryptedVenueVisit(0, new DayDate(departureTime), encryptedData.getC1(), encryptedData.getC2(),
-							encryptedData.getC3(), encryptedData.getNonce()));
+			encryptedVenueVisits.add(new EncryptedVenueVisit(0, new DayDate(departureTime),
+					new EncryptedData(encryptedData.getC1(), encryptedData.getC2(), encryptedData.getC3(),
+							encryptedData.getNonce())));
 		}
 
 		return encryptedVenueVisits;
@@ -74,9 +74,7 @@ public class CryptoUtils {
 			G1 secretKeyForIdentity = new G1();
 			secretKeyForIdentity.deserialize(eventInfo.getSecretKeyForIdentity());
 
-			byte[] msg_p = decryptInternal(
-					new EncryptedData(venueVisit.getC1(), venueVisit.getC2(), venueVisit.getC3(), venueVisit.getNonce()),
-					secretKeyForIdentity, eventInfo.getIdentity());
+			byte[] msg_p = decryptInternal(venueVisit.getEncryptedData(), secretKeyForIdentity, eventInfo.getIdentity());
 			if (msg_p == null) continue;
 
 			Payload payload = new Gson().fromJson(new String(msg_p), Payload.class);
@@ -157,14 +155,12 @@ public class CryptoUtils {
 
 	public byte[] generateIdentity(Qr.QRCodeContent qrCodeContent, byte[] nonce1, byte[] nonce2, int hour) {
 		byte[] hash1 = crypto_hash_sha256(concatenate(qrCodeContent.toByteArray(), nonce1));
-		return crypto_hash_sha256(concatenate(hash1, concatenate(String.valueOf(hour).getBytes(), nonce2)));
+		return crypto_hash_sha256(concatenate(hash1, concatenate(nonce2, String.valueOf(hour).getBytes())));
 	}
 
 	public byte[] generateIdentity(int hour, VenueInfo venueInfo) {
-		byte[] hash1 = crypto_hash_sha256(
-				concatenate(venueInfoToInfoBytes(venueInfo), venueInfo.getNonce1()));
-		return crypto_hash_sha256(concatenate(hash1,
-				concatenate(String.valueOf(hour).getBytes(), venueInfo.getNonce2())));
+		byte[] hash1 = crypto_hash_sha256(concatenate(venueInfoToInfoBytes(venueInfo), venueInfo.getNonce1()));
+		return crypto_hash_sha256(concatenate(hash1, concatenate(venueInfo.getNonce2(), String.valueOf(hour).getBytes())));
 	}
 
 	private byte[] crypto_secretbox_easy(byte[] secretKey, byte[] message, byte[] nonce) {
