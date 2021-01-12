@@ -1,6 +1,5 @@
 package org.crowdnotifier.android.sdk_test_app;
 
-import androidx.lifecycle.ViewModelProvider;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -12,8 +11,6 @@ import android.view.ViewGroup;
 import org.crowdnotifier.android.sdk.CrowdNotifier;
 
 public class MainFragment extends Fragment {
-
-	private MainViewModel mViewModel;
 
 	public static MainFragment newInstance() {
 		return new MainFragment();
@@ -30,8 +27,6 @@ public class MainFragment extends Fragment {
 	@Override
 	public void onActivityCreated(@Nullable Bundle savedInstanceState) {
 		super.onActivityCreated(savedInstanceState);
-		mViewModel = new ViewModelProvider(this).get(MainViewModel.class);
-		// TODO: Use the ViewModel
 	}
 
 }

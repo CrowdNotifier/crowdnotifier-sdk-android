@@ -21,7 +21,7 @@ import org.crowdnotifier.android.sdk.model.EncryptedVenueVisit;
 public class VenueVisitStorage {
 
 	private static final String KEY_CROWDNOTIFIER_STORE = "KEY_CROWDNOTIFIER_STORE";
-	private static final String KEY_VENUE_VISITS = "KEY_VENUE_VISITS";
+	private static final String KEY_VENUE_VISITS = "KEY_VENUE_VISITS_V2";
 	private static final Type VENUE_LIST_TYPE = new TypeToken<ArrayList<EncryptedVenueVisit>>() { }.getType();
 
 	private static VenueVisitStorage instance;
@@ -49,21 +49,28 @@ public class VenueVisitStorage {
 		return instance;
 	}
 
-	public long addEntry(EncryptedVenueVisit newVenueVisit) {
+	/**
+	 * Sets a single ID to all entries in the passed list and stores all entries.
+	 * @return the ID
+	 */
+	public long addEntries(List<EncryptedVenueVisit> newVenueVisits){
 		List<EncryptedVenueVisit> venueVisitList = getEntries();
 		long newId = getMaxId(venueVisitList) + 1;
-		newVenueVisit.setId(newId);
-		venueVisitList.add(newVenueVisit);
+		for (EncryptedVenueVisit newVenueVisit : newVenueVisits){
+			newVenueVisit.setId(newId);
+			venueVisitList.add(newVenueVisit);
+		}
 		saveToPrefs(venueVisitList);
 		return newId;
 	}
 
-	public boolean updateEntry(EncryptedVenueVisit newVenueVisit) {
+	public boolean updateEntries(List<EncryptedVenueVisit> newVenueVisits) {
+		if (newVenueVisits == null || newVenueVisits.isEmpty()) return false;
 		List<EncryptedVenueVisit> venueVisitList = getEntries();
-		EncryptedVenueVisit oldEntry = getVenueVisitWithId(venueVisitList, newVenueVisit.getId());
-		if (oldEntry == null) return false;
-		venueVisitList.remove(oldEntry);
-		venueVisitList.add(newVenueVisit);
+		List<EncryptedVenueVisit> oldEntries = getVenueVisitsWithId(venueVisitList, newVenueVisits.get(0).getId());
+		if (oldEntries.isEmpty()) return false;
+		venueVisitList.removeAll(oldEntries);
+		venueVisitList.addAll(newVenueVisits);
 		saveToPrefs(venueVisitList);
 		return true;
 	}
@@ -95,13 +102,14 @@ public class VenueVisitStorage {
 		return maxId;
 	}
 
-	private EncryptedVenueVisit getVenueVisitWithId(List<EncryptedVenueVisit> venueVisitList, long id) {
+	private List<EncryptedVenueVisit> getVenueVisitsWithId(List<EncryptedVenueVisit> venueVisitList, long id) {
+		ArrayList<EncryptedVenueVisit> result = new ArrayList<>();
 		for (EncryptedVenueVisit venueVisit : venueVisitList) {
 			if (venueVisit.getId() == id) {
-				return venueVisit;
+				result.add(venueVisit);
 			}
 		}
-		return null;
+		return result;
 	}
 
 	private void saveToPrefs(List<EncryptedVenueVisit> venueVisitList) {

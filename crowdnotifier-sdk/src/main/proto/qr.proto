@@ -1,16 +1,17 @@
-syntax = "proto2";
+syntax = "proto3";
 package org.crowdnotifier.android.sdk.model;
 
-message QRCodeWrapper {
-  required int32 version = 1;
-  required bytes publicKey = 2;
-  required bytes r1 = 3;
-  required QRCodeContent content = 4;
+message QRCodeEntry {
+  uint32 version = 1;
+  QRCodeContent data = 2;
+  bytes masterPublicKey = 3;
+  EntryProof entryProof = 4;
 }
+
 message QRCodeContent {
-  required string name = 1;
-  required string location = 2;
-  optional string room = 3;
+  string name = 1;
+  string location = 2;
+  string room = 3;
   enum VenueType {
     OTHER = 0;
     MEETING_ROOM = 1;
@@ -23,9 +24,15 @@ message QRCodeContent {
     GYM = 8;
     KITCHEN_AREA = 9;
     OFFICE_SPACE = 10;
-  };
-  required VenueType venueType = 4;
-  required bytes notificationKey = 5;
-  optional uint64 validFrom = 6;
-  optional uint64 validTo = 7;
+  }
+  VenueType venueType = 4;
+  bytes notificationKey = 5;
+  uint64 validFrom = 6;
+  uint64 validTo = 7;
 }
+
+message EntryProof {
+  bytes nonce1 = 1;
+  bytes nonce2 = 2;
+}
+

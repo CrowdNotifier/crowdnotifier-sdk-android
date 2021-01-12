@@ -3,16 +3,11 @@ package org.crowdnotifier.android.sdk.model;
 public class EncryptedVenueVisit {
 	private long id;
 	private DayDate dayDate;
-	private byte[] ephemeralPublicKey;
-	private byte[] tag;
-	private byte[] encryptedPayload;
+	IBECiphertext ibeCiphertext;
 
-	public EncryptedVenueVisit(long id, DayDate dayDate, byte[] ephemeralPublicKey, byte[] tag, byte[] encryptedPayload) {
-		this.id = id;
+	public EncryptedVenueVisit(DayDate dayDate, IBECiphertext ibeCiphertext) {
 		this.dayDate = dayDate;
-		this.ephemeralPublicKey = ephemeralPublicKey;
-		this.tag = tag;
-		this.encryptedPayload = encryptedPayload;
+		this.ibeCiphertext = ibeCiphertext;
 	}
 
 	public long getId() {
@@ -23,20 +18,12 @@ public class EncryptedVenueVisit {
 		return dayDate;
 	}
 
-	public byte[] getEphemeralPublicKey() {
-		return ephemeralPublicKey;
-	}
-
-	public byte[] getTag() {
-		return tag;
-	}
-
-	public byte[] getEncryptedPayload() {
-		return encryptedPayload;
-	}
-
 	public void setId(long id) {
 		this.id = id;
+	}
+
+	public IBECiphertext getIbeCiphertext() {
+		return ibeCiphertext;
 	}
 
 }
