@@ -3,12 +3,11 @@ package org.crowdnotifier.android.sdk.model;
 public class EncryptedVenueVisit {
 	private long id;
 	private DayDate dayDate;
-	EncryptedData encryptedData;
+	IBECiphertext ibeCiphertext;
 
-	public EncryptedVenueVisit(long id, DayDate dayDate, EncryptedData encryptedData) {
-		this.id = id;
+	public EncryptedVenueVisit(DayDate dayDate, IBECiphertext ibeCiphertext) {
 		this.dayDate = dayDate;
-		this.encryptedData = encryptedData;
+		this.ibeCiphertext = ibeCiphertext;
 	}
 
 	public long getId() {
@@ -23,8 +22,8 @@ public class EncryptedVenueVisit {
 		this.id = id;
 	}
 
-	public EncryptedData getEncryptedData() {
-		return encryptedData;
+	public IBECiphertext getIbeCiphertext() {
+		return ibeCiphertext;
 	}
 
 }

@@ -56,10 +56,8 @@ public class CryptoUtils {
 			byte[] message =
 					(new Gson().toJson(new Payload(arrivalTime, departureTime, venueInfo.getNotificationKey()))).getBytes();
 
-			EncryptedData encryptedData = encryptInternal(message, identity, masterPublicKey);
-			encryptedVenueVisits.add(new EncryptedVenueVisit(0, new DayDate(departureTime),
-					new EncryptedData(encryptedData.getC1(), encryptedData.getC2(), encryptedData.getC3(),
-							encryptedData.getNonce())));
+			IBECiphertext ibeCiphertext = encryptInternal(masterPublicKey, identity, message);
+			encryptedVenueVisits.add(new EncryptedVenueVisit(new DayDate(departureTime), ibeCiphertext));
 		}
 
 		return encryptedVenueVisits;
@@ -71,10 +69,14 @@ public class CryptoUtils {
 
 		for (EncryptedVenueVisit venueVisit : venueVisits) {
 
+			long venueVisitStart = venueVisit.getDayDate().getStartOfDayTimestamp();
+			long venueVisitEnd = venueVisit.getDayDate().getNextDay().getStartOfDayTimestamp();
+			if (!doIntersect(venueVisitStart, venueVisitEnd, eventInfo.getStartTimestamp(), eventInfo.getEndTimestamp())) continue;
+
 			G1 secretKeyForIdentity = new G1();
 			secretKeyForIdentity.deserialize(eventInfo.getSecretKeyForIdentity());
 
-			byte[] msg_p = decryptInternal(venueVisit.getEncryptedData(), secretKeyForIdentity, eventInfo.getIdentity());
+			byte[] msg_p = decryptInternal(venueVisit.getIbeCiphertext(), secretKeyForIdentity, eventInfo.getIdentity());
 			if (msg_p == null) continue;
 
 			Payload payload = new Gson().fromJson(new String(msg_p), Payload.class);
@@ -92,19 +94,23 @@ public class CryptoUtils {
 		return exposureEvents;
 	}
 
-	public byte[] decryptInternal(EncryptedData encryptedData, G1 secretKeyForIdentity, byte[] identity) {
+	private boolean doIntersect(long startTime1, long endTime1, long startTime2, long endTime2) {
+		return startTime1 <= endTime2 && endTime1 >= startTime2;
+	}
+
+	public byte[] decryptInternal(IBECiphertext ibeCiphertext, G1 secretKeyForIdentity, byte[] identity) {
 		G2 c1 = new G2();
-		c1.deserialize(encryptedData.getC1());
+		c1.deserialize(ibeCiphertext.getC1());
 
 		GT gt_temp = new GT();
 		Mcl.pairing(gt_temp, secretKeyForIdentity, c1);
 
 		byte[] hash = crypto_hash_sha256(gt_temp.serialize());
-		byte[] x_p = xor(encryptedData.getC2(), hash);
+		byte[] x_p = xor(ibeCiphertext.getC2(), hash);
 
-		byte[] msg_p = new byte[encryptedData.getC3().length - Box.MACBYTES];
-		int result = sodium.crypto_secretbox_open_easy(msg_p, encryptedData.getC3(), encryptedData.getC3().length,
-				encryptedData.getNonce(), crypto_hash_sha256(x_p));
+		byte[] msg_p = new byte[ibeCiphertext.getC3().length - Box.MACBYTES];
+		int result = sodium.crypto_secretbox_open_easy(msg_p, ibeCiphertext.getC3(), ibeCiphertext.getC3().length,
+				ibeCiphertext.getNonce(), crypto_hash_sha256(x_p));
 		if (result != 0) return null;
 
 		//Additional verification
@@ -124,12 +130,12 @@ public class CryptoUtils {
 		return msg_p;
 	}
 
-	public EncryptedData encryptInternal(byte[] message, byte[] identity, G2 masterPublicKey) {
+	public IBECiphertext encryptInternal(G2 masterPublicKey, byte[] identity, byte[] message) {
 
-		byte[] nonceX = randombytes_buf();
+		byte[] x = randombytes_buf();
 
 		Fr r = new Fr();
-		r.setHashOf(concatenate(nonceX, concatenate(identity, message)));
+		r.setHashOf(concatenate(x, concatenate(identity, message)));
 
 		G2 c1 = new G2();
 		Mcl.mul(c1, baseG2(), r);
@@ -144,13 +150,13 @@ public class CryptoUtils {
 		Mcl.pow(gt_temp, gt1_temp, r);
 
 		byte[] c2_pair = crypto_hash_sha256(gt_temp.serialize());
-		byte[] c2 = xor(nonceX, c2_pair);
+		byte[] c2 = xor(x, c2_pair);
 
 		byte[] nonce = randombytes_buf();
 
-		byte[] c3 = crypto_secretbox_easy(crypto_hash_sha256(nonceX), message, nonce);
+		byte[] c3 = crypto_secretbox_easy(crypto_hash_sha256(x), message, nonce);
 
-		return new EncryptedData(c1.serialize(), c2, c3, nonce);
+		return new IBECiphertext(c1.serialize(), c2, c3, nonce);
 	}
 
 	public byte[] generateIdentity(Qr.QRCodeContent qrCodeContent, byte[] nonce1, byte[] nonce2, int hour) {
@@ -164,16 +170,16 @@ public class CryptoUtils {
 	}
 
 	private byte[] crypto_secretbox_easy(byte[] secretKey, byte[] message, byte[] nonce) {
-		byte[] encrytpedMessage = new byte[message.length + Box.MACBYTES];
-		int result = sodium.crypto_secretbox_easy(encrytpedMessage, message, message.length, nonce, secretKey);
+		byte[] encryptedMessage = new byte[message.length + Box.MACBYTES];
+		int result = sodium.crypto_secretbox_easy(encryptedMessage, message, message.length, nonce, secretKey);
 		if (result != 0) { throw new RuntimeException("crypto_secretbox_easy returned a value != 0"); }
-		return encrytpedMessage;
+		return encryptedMessage;
 	}
 
 	private byte[] crypto_secretbox_open_easy(byte[] key, byte[] cipherText, byte[] nonce) {
 		byte[] decryptedMessage = new byte[cipherText.length - Box.MACBYTES];
 		int result = sodium.crypto_secretbox_open_easy(decryptedMessage, cipherText, cipherText.length, nonce, key);
-		if (result != 0) { throw new RuntimeException("crypto_secretbox_open_easy returned a value != 0"); }
+		if (result != 0) return new byte[0];
 		return decryptedMessage;
 	}
 
@@ -234,7 +240,7 @@ public class CryptoUtils {
 		}
 	}
 
-	private G2 baseG2() {
+	public G2 baseG2() {
 		G2 baseG2 = new G2();
 		baseG2.setStr("1 3527010695874666181871391160110601448900299527927752" +
 				"40219908644239793785735715026873347600343865175952761926303160 " +

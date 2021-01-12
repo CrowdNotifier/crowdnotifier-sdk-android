@@ -136,13 +136,9 @@ public class MatchingTest {
 		for (Backend.PreTraceWithProof preTraceWithProof : preTraceWithProofList) {
 			Backend.Trace trace = createTrace(preTraceWithProof, haKeyPair);
 
-			byte[] nonce = getRandomValue(Box.NONCEBYTES);
-			byte[] encryptedMessage = encryptMessage(preTraceWithProof.getPreTrace().getNotificationKey().toByteArray(),
-					preTraceWithProof.getPreTrace().getMessage(), nonce);
-
 			publishedSKs.add(new ProblematicEventInfo(trace.getIdentity().toByteArray(),
-					trace.getSecretKeyForIdentity().toByteArray(), preTraceWithProof.getStartTime(),
-					preTraceWithProof.getEndTime(), encryptedMessage, nonce));
+					trace.getSecretKeyForIdentity().toByteArray(), trace.getStartTime(), trace.getEndTime(),
+					trace.getEncryptedMessage().toByteArray(), trace.getNonce().toByteArray()));
 		}
 		return publishedSKs;
 	}
@@ -165,8 +161,8 @@ public class MatchingTest {
 		G1 partialSecretKeyForIdentityOfHealthAuthority = keyDer(mskh, preTrace.getIdentity().toByteArray());
 		G1 partialSecretKeyForIdentityOfLocation = new G1();
 		partialSecretKeyForIdentityOfLocation.deserialize(preTrace.getPartialSecretKeyForIdentityOfLocation().toByteArray());
-		G1 secretKeyForIdentity = new G1();
 
+		G1 secretKeyForIdentity = new G1();
 		Mcl.add(secretKeyForIdentity, partialSecretKeyForIdentityOfLocation, partialSecretKeyForIdentityOfHealthAuthority);
 
 		Qr.QRCodeContent qrCodeContent = Qr.QRCodeContent.parseFrom(preTraceWithProof.getInfo());
@@ -181,13 +177,21 @@ public class MatchingTest {
 		byte[] msg_orig = getRandomValue(NONCE_LENGTH);
 		G2 masterPublicKey = new G2();
 		masterPublicKey.deserialize(proof.getMasterPublicKey().toByteArray());
-		EncryptedData encryptedData = cryptoUtils.encryptInternal(msg_orig, identity, masterPublicKey);
-		byte[] msg_dec = cryptoUtils.decryptInternal(encryptedData, secretKeyForIdentity, identity);
+		IBECiphertext ibeCiphertext = cryptoUtils.encryptInternal(masterPublicKey, identity, msg_orig);
+		byte[] msg_dec = cryptoUtils.decryptInternal(ibeCiphertext, secretKeyForIdentity, identity);
 		if (msg_dec == null) throw new RuntimeException("Health Authority could not verify Trace");
+
+		byte[] nonce = getRandomValue(Box.NONCEBYTES);
+		byte[] encryptedMessage = encryptMessage(preTraceWithProof.getPreTrace().getNotificationKey().toByteArray(),
+				preTraceWithProof.getPreTrace().getMessage(), nonce);
 
 		return Backend.Trace.newBuilder()
 				.setIdentity(preTrace.getIdentity())
 				.setSecretKeyForIdentity(ByteString.copyFrom(secretKeyForIdentity.serialize()))
+				.setStartTime(preTraceWithProof.getStartTime())
+				.setEndTime(preTraceWithProof.getEndTime())
+				.setNonce(ByteString.copyFrom(nonce))
+				.setEncryptedMessage(ByteString.copyFrom(encryptedMessage))
 				.build();
 	}
 
@@ -250,19 +254,6 @@ public class MatchingTest {
 		return result;
 	}
 
-	private G2 baseG2() {
-		G2 baseG2 = new G2();
-		baseG2.setStr("1 3527010695874666181871391160110601448900299527927752" +
-				"40219908644239793785735715026873347600343865175952761926303160 " +
-				"305914434424421370997125981475378163698647032547664755865937320" +
-				"6291635324768958432433509563104347017837885763365758 " +
-				"198515060228729193556805452117717163830086897821565573085937866" +
-				"5066344726373823718423869104263333984641494340347905 " +
-				"927553665492332455747201965776037880757740193453592970025027978" +
-				"793976877002675564980949289727957565575433344219582");
-		return baseG2;
-	}
-
 	private KeyPair createHAKeyPair() {
 		byte[] publicKey = new byte[Box.PUBLICKEYBYTES];
 		byte[] privateKey = new byte[Box.SECRETKEYBYTES];
@@ -288,7 +279,7 @@ public class MatchingTest {
 		privateKey.setByCSPRNG();
 
 		G2 publicKey = new G2();
-		Mcl.mul(publicKey, baseG2(), privateKey);
+		Mcl.mul(publicKey, cryptoUtils.baseG2(), privateKey);
 		return new KeyPairMcl(publicKey, privateKey);
 	}
 

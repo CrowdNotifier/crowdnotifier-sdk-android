@@ -1,12 +1,12 @@
 package org.crowdnotifier.android.sdk.model;
 
-public class EncryptedData {
+public class IBECiphertext {
 	private byte[] c1;
 	private byte[] c2;
 	private byte[] c3;
 	private byte[] nonce;
 
-	public EncryptedData(byte[] c1, byte[] c2, byte[] c3, byte[] nonce) {
+	public IBECiphertext(byte[] c1, byte[] c2, byte[] c3, byte[] nonce) {
 		this.c1 = c1;
 		this.c2 = c2;
 		this.c3 = c3;

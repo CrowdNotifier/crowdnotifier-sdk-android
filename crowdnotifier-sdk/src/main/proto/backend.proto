@@ -4,6 +4,7 @@ package org.crowdnotifier.android.sdk.model;
 message QRCodeTrace {
   uint32 version = 1;
   MasterTrace masterTraceRecord = 2;
+  bytes notificationKey = 3;
 }
 
 message MasterTrace {
@@ -41,5 +42,9 @@ message PreTraceWithProof {
 message Trace {
   bytes identity = 1;
   bytes secretKeyForIdentity = 2;
+  int64 startTime = 3;
+  int64 endTime = 4;
+  bytes nonce = 5;
+  bytes encryptedMessage = 6;
 }
 
