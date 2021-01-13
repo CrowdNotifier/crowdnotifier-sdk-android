@@ -50,27 +50,24 @@ public class VenueVisitStorage {
 	}
 
 	/**
-	 * Sets a single ID to all entries in the passed list and stores all entries.
+	 * Sets an ID to the passed entry and stores it.
 	 * @return the ID
 	 */
-	public long addEntries(List<EncryptedVenueVisit> newVenueVisits){
+	public long addEntry(EncryptedVenueVisit newVenueVisit) {
 		List<EncryptedVenueVisit> venueVisitList = getEntries();
 		long newId = getMaxId(venueVisitList) + 1;
-		for (EncryptedVenueVisit newVenueVisit : newVenueVisits){
-			newVenueVisit.setId(newId);
-			venueVisitList.add(newVenueVisit);
-		}
+		newVenueVisit.setId(newId);
+		venueVisitList.add(newVenueVisit);
 		saveToPrefs(venueVisitList);
 		return newId;
 	}
 
-	public boolean updateEntries(List<EncryptedVenueVisit> newVenueVisits) {
-		if (newVenueVisits == null || newVenueVisits.isEmpty()) return false;
+	public boolean updateEntry(EncryptedVenueVisit newVenueVisit) {
 		List<EncryptedVenueVisit> venueVisitList = getEntries();
-		List<EncryptedVenueVisit> oldEntries = getVenueVisitsWithId(venueVisitList, newVenueVisits.get(0).getId());
-		if (oldEntries.isEmpty()) return false;
-		venueVisitList.removeAll(oldEntries);
-		venueVisitList.addAll(newVenueVisits);
+		EncryptedVenueVisit oldEntry = getVenueVisitWithId(venueVisitList, newVenueVisit.getId());
+		if (oldEntry == null) return false;
+		venueVisitList.remove(oldEntry);
+		venueVisitList.add(newVenueVisit);
 		saveToPrefs(venueVisitList);
 		return true;
 	}
@@ -102,14 +99,13 @@ public class VenueVisitStorage {
 		return maxId;
 	}
 
-	private List<EncryptedVenueVisit> getVenueVisitsWithId(List<EncryptedVenueVisit> venueVisitList, long id) {
-		ArrayList<EncryptedVenueVisit> result = new ArrayList<>();
+	private EncryptedVenueVisit getVenueVisitWithId(List<EncryptedVenueVisit> venueVisitList, long id) {
 		for (EncryptedVenueVisit venueVisit : venueVisitList) {
 			if (venueVisit.getId() == id) {
-				result.add(venueVisit);
+				return venueVisit;
 			}
 		}
-		return result;
+		return null;
 	}
 
 	private void saveToPrefs(List<EncryptedVenueVisit> venueVisitList) {

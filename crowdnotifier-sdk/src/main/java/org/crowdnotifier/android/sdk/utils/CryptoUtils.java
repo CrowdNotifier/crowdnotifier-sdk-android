@@ -40,13 +40,13 @@ public class CryptoUtils {
 		return instance;
 	}
 
-	public List<EncryptedVenueVisit> getEncryptedVenueVisit(long arrivalTime, long departureTime, VenueInfo venueInfo) {
+	public EncryptedVenueVisit getEncryptedVenueVisit(long arrivalTime, long departureTime, VenueInfo venueInfo) {
 
 		G2 masterPublicKey = new G2();
 		masterPublicKey.deserialize(venueInfo.getMasterPublicKey());
 
 		//scan
-		ArrayList<EncryptedVenueVisit> encryptedVenueVisits = new ArrayList<>();
+		ArrayList<IBECiphertext> ibeCiphertextsEntries = new ArrayList<>();
 
 		ArrayList<Integer> hourCounters = getAffectedHours(arrivalTime, departureTime);
 		for (Integer hour : hourCounters) {
@@ -56,11 +56,10 @@ public class CryptoUtils {
 			byte[] message =
 					(new Gson().toJson(new Payload(arrivalTime, departureTime, venueInfo.getNotificationKey()))).getBytes();
 
-			IBECiphertext ibeCiphertext = encryptInternal(masterPublicKey, identity, message);
-			encryptedVenueVisits.add(new EncryptedVenueVisit(new DayDate(departureTime), ibeCiphertext));
+			ibeCiphertextsEntries.add(encryptInternal(masterPublicKey, identity, message));
 		}
 
-		return encryptedVenueVisits;
+		return new EncryptedVenueVisit(new DayDate(departureTime), ibeCiphertextsEntries);
 	}
 
 	public List<ExposureEvent> searchAndDecryptMatches(ProblematicEventInfo eventInfo, List<EncryptedVenueVisit> venueVisits) {
@@ -76,20 +75,23 @@ public class CryptoUtils {
 			G1 secretKeyForIdentity = new G1();
 			secretKeyForIdentity.deserialize(eventInfo.getSecretKeyForIdentity());
 
-			byte[] msg_p = decryptInternal(venueVisit.getIbeCiphertext(), secretKeyForIdentity, eventInfo.getIdentity());
-			if (msg_p == null) continue;
+			for (IBECiphertext ibeCiphertext : venueVisit.getIbeCiphertextEntries()){
+				byte[] msg_p = decryptInternal(ibeCiphertext, secretKeyForIdentity, eventInfo.getIdentity());
+				if (msg_p == null) continue;
 
-			Payload payload = new Gson().fromJson(new String(msg_p), Payload.class);
+				Payload payload = new Gson().fromJson(new String(msg_p), Payload.class);
 
-			byte[] decryptedMessage = crypto_secretbox_open_easy(payload.getNotificationKey(), eventInfo.getEncryptedMessage(),
-					eventInfo.getNonce());
+				byte[] decryptedMessage = crypto_secretbox_open_easy(payload.getNotificationKey(), eventInfo.getEncryptedMessage(),
+						eventInfo.getNonce());
 
-			String decryptedMessageString = new String(decryptedMessage);
+				String decryptedMessageString = new String(decryptedMessage);
 
-			ExposureEvent exposureEvent = new ExposureEvent(venueVisit.getId(), payload.getArrivalTime(),
-					payload.getDepartureTime(), decryptedMessageString);
+				ExposureEvent exposureEvent = new ExposureEvent(venueVisit.getId(), payload.getArrivalTime(),
+						payload.getDepartureTime(), decryptedMessageString);
 
-			exposureEvents.add(exposureEvent);
+				exposureEvents.add(exposureEvent);
+				break;
+			}
 		}
 		return exposureEvents;
 	}

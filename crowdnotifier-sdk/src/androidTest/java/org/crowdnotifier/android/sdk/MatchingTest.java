@@ -31,6 +31,10 @@ import org.crowdnotifier.android.sdk.utils.Base64Util;
 
 import static org.junit.Assert.assertEquals;
 
+/**
+ * This class implements tests to validate the cryptographic operations in the app. To do so the test implements all cryptographic
+ * computations that are normally done in the Backend.
+ */
 @RunWith(AndroidJUnit4.class)
 public class MatchingTest {
 
@@ -38,8 +42,8 @@ public class MatchingTest {
 	private SodiumAndroid sodium;
 	private CryptoUtils cryptoUtils;
 	KeyPair haKeyPair;
-	private static final long ONE_DAY_IN_MILLIS = 24 * 60 * 60 * 1000L;
 	private static final long ONE_HOUR_IN_MILLIS = 60 * 60 * 1000L;
+	private static final long ONE_DAY_IN_MILLIS = 24 * ONE_HOUR_IN_MILLIS;
 
 
 	@Before
