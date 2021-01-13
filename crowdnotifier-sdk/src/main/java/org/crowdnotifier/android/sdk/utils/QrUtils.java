@@ -11,7 +11,7 @@ import static android.util.Base64.NO_PADDING;
 
 public class QrUtils {
 
-	private static final String QR_CODE_VERSION = "1";
+	private static final String QR_CODE_VERSION = "2";
 
 	public static VenueInfo getQrInfo(String qrCodeString, String expectedQrCodePrefix) throws QRException {
 
@@ -27,19 +27,20 @@ public class QrUtils {
 		try {
 			int decodeFlags = Base64.NO_WRAP | Base64.URL_SAFE | NO_PADDING;
 			byte[] decoded = Base64.decode(fragmentSplit[1], decodeFlags);
-			Qr.QRCodeWrapper qrCodeWrapper = Qr.QRCodeWrapper.parseFrom(decoded);
-			Qr.QRCodeContent qrCode = qrCodeWrapper.getContent();
+			Qr.QRCodeEntry qrCodeEntry = Qr.QRCodeEntry.parseFrom(decoded);
+			Qr.QRCodeContent qrCode = qrCodeEntry.getData();
 
-			if (qrCode.hasValidFrom() && System.currentTimeMillis() < qrCode.getValidFrom()) {
+			if (System.currentTimeMillis() < qrCode.getValidFrom()) {
 				throw new NotYetValidException();
 			}
-			if (qrCode.hasValidTo() && System.currentTimeMillis() > qrCode.getValidTo()) {
+			if (System.currentTimeMillis() > qrCode.getValidTo()) {
 				throw new NotValidAnymoreException();
 			}
 
-			return new VenueInfo(qrCode.getName(), qrCode.getLocation(), qrCode.getRoom(), qrCode.getVenueType(),
-					qrCodeWrapper.getPublicKey().toByteArray(), qrCode.getNotificationKey().toByteArray(),
-					qrCodeWrapper.getR1().toByteArray(), qrCode.getValidFrom(), qrCode.getValidTo());
+			return new VenueInfo(qrCode.getName(), qrCode.getLocation(), qrCode.getRoom(),
+					qrCode.getNotificationKey().toByteArray(), qrCode.getVenueType(),
+					qrCodeEntry.getMasterPublicKey().toByteArray(), qrCodeEntry.getEntryProof().getNonce1().toByteArray(),
+					qrCodeEntry.getEntryProof().getNonce2().toByteArray(), qrCode.getValidFrom(), qrCode.getValidTo());
 		} catch (InvalidProtocolBufferException e) {
 			e.printStackTrace();
 			throw new InvalidQRCodeFormatException();

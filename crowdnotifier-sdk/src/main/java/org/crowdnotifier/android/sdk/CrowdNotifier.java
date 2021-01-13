@@ -55,11 +55,8 @@ public class CrowdNotifier {
 			for (ExposureEvent match : matches) {
 				if (match.getStartTime() <= problematicEventInfo.getEndTimestamp() &&
 						match.getEndTime() >= problematicEventInfo.getStartTimestamp()) {
-					ExposureEvent newExposureEvent = new ExposureEvent(match.getId(),
-							Math.max(match.getStartTime(), problematicEventInfo.getStartTimestamp()),
-							Math.min(match.getEndTime(), problematicEventInfo.getEndTimestamp()), match.getMessage());
-					boolean added = exposureStorage.addEntry(newExposureEvent);
-					if (added) newExposureEvents.add(newExposureEvent);
+					boolean added = exposureStorage.addEntry(match);
+					if (added) newExposureEvents.add(match);
 				}
 			}
 		}

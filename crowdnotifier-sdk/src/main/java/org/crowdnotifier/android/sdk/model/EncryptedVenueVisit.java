@@ -1,18 +1,15 @@
 package org.crowdnotifier.android.sdk.model;
 
+import java.util.List;
+
 public class EncryptedVenueVisit {
 	private long id;
 	private DayDate dayDate;
-	private byte[] ephemeralPublicKey;
-	private byte[] tag;
-	private byte[] encryptedPayload;
+	List<IBECiphertext> ibeCiphertextEntries;
 
-	public EncryptedVenueVisit(long id, DayDate dayDate, byte[] ephemeralPublicKey, byte[] tag, byte[] encryptedPayload) {
-		this.id = id;
+	public EncryptedVenueVisit(DayDate dayDate, List<IBECiphertext> ibeCiphertextEntries) {
 		this.dayDate = dayDate;
-		this.ephemeralPublicKey = ephemeralPublicKey;
-		this.tag = tag;
-		this.encryptedPayload = encryptedPayload;
+		this.ibeCiphertextEntries = ibeCiphertextEntries;
 	}
 
 	public long getId() {
@@ -23,20 +20,12 @@ public class EncryptedVenueVisit {
 		return dayDate;
 	}
 
-	public byte[] getEphemeralPublicKey() {
-		return ephemeralPublicKey;
-	}
-
-	public byte[] getTag() {
-		return tag;
-	}
-
-	public byte[] getEncryptedPayload() {
-		return encryptedPayload;
-	}
-
 	public void setId(long id) {
 		this.id = id;
+	}
+
+	public List<IBECiphertext> getIbeCiphertextEntries() {
+		return ibeCiphertextEntries;
 	}
 
 }
