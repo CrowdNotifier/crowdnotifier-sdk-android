@@ -86,6 +86,18 @@ public class ExposureStorage {
 		saveToPrefs(exposureEventList);
 	}
 
+	public void removeExposure(long id) {
+		List<ExposureEvent> exposureEventList = getEntries();
+		Iterator<ExposureEvent> iterator = exposureEventList.iterator();
+		while (iterator.hasNext()) {
+			if (iterator.next().getId() == id) {
+				iterator.remove();
+				break;
+			}
+		}
+		saveToPrefs(exposureEventList);
+	}
+
 	private void saveToPrefs(List<ExposureEvent> exposureEventList) {
 		sharedPreferences.edit().putString(KEY_EXPOSURES, gson.toJson(exposureEventList)).apply();
 	}

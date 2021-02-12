@@ -59,6 +59,9 @@ List<ExposureEvent> allExposures = CrowdNotifier.getExposureEvents(getContext())
 
 // Clean up old entries
 CrowdNotifier.cleanUpOldData(getContext(), 10);
+
+// Remove an Exposure Event
+CrowdNotifier.removeExposure(getContext(), id);
 ```
 
 ## Static methods of CrowdNotifier
@@ -74,6 +77,7 @@ updateCheckin | Updates a checkin that has previously been stored | `public stat
 checkForMatches | Given a set of published events with a known infected visitor, stores and returns those locally stored check ins that overlap with one of the problematic events | `public static List<ExposureEvent> checkForMatches(List<ProblematicEventInfo> publishedSKs, Context context)`
 getExposureEvents | Returns all currently stored check ins that have previously matched a problematic event | `public static List<ExposureEvent> getExposureEvents(Context context)`
 cleanUpOldData | Removes all check ins that are older than the specified number of days | `public static void cleanUpOldData(Context context, int maxDaysToKeep)`
+removeExposure | Removes the exposure with the given ID | `public static void removeExposure(Context context, long exposureId)`
 
 ## Contributing
 

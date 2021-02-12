@@ -72,4 +72,8 @@ public class CrowdNotifier {
 		ExposureStorage.getInstance(context).removeEntriesBefore(maxDaysToKeep);
 	}
 
+	public static void removeExposure(Context context, long exposureId) {
+		ExposureStorage.getInstance(context).removeExposure(exposureId);
+	}
+
 }
