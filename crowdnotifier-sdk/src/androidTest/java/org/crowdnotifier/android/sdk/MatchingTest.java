@@ -62,6 +62,84 @@ public class MatchingTest {
 		haKeyPair = createHAKeyPair();
 	}
 
+	/**
+	 * This test runs a benchmark with 1000 Encryptions, 1000 successful Decryptions and 1000 unsuccessful Decryptions and prints
+	 * the results to the console.
+	 */
+	@Test
+	public void benchmark() throws QrUtils.QRException, InvalidProtocolBufferException {
+		long currentTime = System.currentTimeMillis();
+		long arrivalTime = 20;
+		long departureTime = 30;
+		long exposureStart = 25;
+		long exposureEnd = 45;
+
+		//Setup Location Owner 1 and 2
+		byte[] notificationKey = new byte[Box.SECRETKEYBYTES];
+		sodium.crypto_secretbox_keygen(notificationKey);
+
+		byte[] notificationKey2 = new byte[Box.SECRETKEYBYTES];
+		sodium.crypto_secretbox_keygen(notificationKey2);
+
+		long qrCodeValidFrom = currentTime - ONE_DAY_IN_MILLIS;
+		long qrCodeValidTo = currentTime + ONE_DAY_IN_MILLIS;
+		Location location1 = new Location(haKeyPair.publicKey, Qr.QRCodeContent.VenueType.OTHER, "Name", "Location",
+				"Room", notificationKey, qrCodeValidFrom, qrCodeValidTo);
+		Location location2 = new Location(haKeyPair.publicKey, Qr.QRCodeContent.VenueType.OTHER, "Name2", "Location2",
+				"Room2", notificationKey2, qrCodeValidFrom, qrCodeValidTo);
+
+		Backend.QRCodeTrace qrTrace1 = location1.getQrCodeTrace();
+		Backend.QRCodeTrace qrTrace2 = location2.getQrCodeTrace();
+
+		//Venue Owners Create PreTraces
+		Backend.PreTraceWithProof preTraceWithProof1 =
+				createPreTrace(qrTrace1, exposureStart, exposureEnd, notificationKey, "message").get(0);
+
+		Backend.PreTraceWithProof preTraceWithProof2 =
+				createPreTrace(qrTrace2, exposureStart, exposureEnd, notificationKey, "message").get(0);
+
+		//Health Authority generates Traces
+		Backend.Trace trace1 = createTrace(preTraceWithProof1, haKeyPair);
+
+		Backend.Trace trace2 = createTrace(preTraceWithProof2, haKeyPair);
+
+		// Create ciphertext for Venue 1
+		int NONCE_LENGTH = 32;
+		byte[] msg_orig = getRandomValue(NONCE_LENGTH);
+		G2 masterPublicKey = new G2();
+		masterPublicKey.deserialize(preTraceWithProof1.getProof().getMasterPublicKey().toByteArray());
+		IBECiphertext ibeCiphertext = cryptoUtils
+				.encryptInternal(masterPublicKey, preTraceWithProof1.getPreTrace().getIdentity().toByteArray(), msg_orig);
+
+		// Benchmark Encryption
+		ArrayList<Long> timestamps = new ArrayList(1001);
+		for (int i = 0; i < 1001; i++) {
+			timestamps.add(System.currentTimeMillis());
+			cryptoUtils.encryptInternal(masterPublicKey, preTraceWithProof1.getPreTrace().getIdentity().toByteArray(), msg_orig);
+		}
+		printValuesAsCSV(timestamps, "ENCRYPTION (in ms)");
+
+		// Benchmark Successful Decryption with Trace1
+		G1 secretKeyForIdentity = new G1();
+		secretKeyForIdentity.deserialize(trace1.getSecretKeyForIdentity().toByteArray());
+		timestamps = new ArrayList(1001);
+		for (int i = 0; i < 1001; i++) {
+			timestamps.add(System.currentTimeMillis());
+			byte[] msg_dec = cryptoUtils.decryptInternal(ibeCiphertext, secretKeyForIdentity, trace1.getIdentity().toByteArray());
+			assert (msg_dec != null);
+		}
+		printValuesAsCSV(timestamps, "SUCCESSFUL DECRYPTION (in ms)");
+
+		// Benchmark Unsuccessful Decryption with Trace2
+		secretKeyForIdentity.deserialize(trace2.getSecretKeyForIdentity().toByteArray());
+		timestamps = new ArrayList(1001);
+		for (int i = 0; i < 1001; i++) {
+			timestamps.add(System.currentTimeMillis());
+			byte[] msg_dec = cryptoUtils.decryptInternal(ibeCiphertext, secretKeyForIdentity, trace2.getIdentity().toByteArray());
+			assert (msg_dec == null);
+		}
+		printValuesAsCSV(timestamps, "UNSUCCESSFUL DECRYPTION (in ms)");
+	}
 
 	@Test
 	public void testMatching() throws QrUtils.QRException, InvalidProtocolBufferException {
@@ -106,6 +184,15 @@ public class MatchingTest {
 
 		//Final Check
 		assertEquals(0, exposureEvents.size());
+	}
+
+	private void printValuesAsCSV(ArrayList<Long> timestamps, String rowTitle) {
+		StringBuilder csvString = new StringBuilder();
+		for (int i = 0; i < timestamps.size() - 1; i++) {
+			csvString.append(timestamps.get(i + 1) - timestamps.get(i));
+			csvString.append(",");
+		}
+		System.out.println(rowTitle + ", " + csvString);
 	}
 
 
@@ -370,7 +457,6 @@ public class MatchingTest {
 					.setVersion(2)
 					.build();
 		}
-
 
 		public Backend.QRCodeTrace getQrCodeTrace() {
 
