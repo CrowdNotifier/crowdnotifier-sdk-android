@@ -2,9 +2,12 @@ package org.crowdnotifier.android.sdk.utils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
+import com.google.crypto.tink.subtle.Hkdf;
 import com.google.gson.Gson;
 import com.google.protobuf.ByteString;
 import com.goterl.lazycode.lazysodium.LazySodiumAndroid;
@@ -51,7 +54,12 @@ public class CryptoUtils {
 		ArrayList<Integer> hourCounters = getAffectedHours(arrivalTime, departureTime);
 		for (Integer hour : hourCounters) {
 
-			byte[] identity = generateIdentity(hour, venueInfo);
+			byte[] identity;
+			if (venueInfo.getInfoBytes() == null) {
+				identity = generateIdentityV2(hour, venueInfo);
+			} else {
+				identity = generateIdentityV3(venueInfo.getInfoBytes(), hour);
+			}
 
 			byte[] message =
 					(new Gson().toJson(new Payload(arrivalTime, departureTime, venueInfo.getNotificationKey()))).getBytes();
@@ -75,7 +83,7 @@ public class CryptoUtils {
 			G1 secretKeyForIdentity = new G1();
 			secretKeyForIdentity.deserialize(eventInfo.getSecretKeyForIdentity());
 
-			for (IBECiphertext ibeCiphertext : venueVisit.getIbeCiphertextEntries()){
+			for (IBECiphertext ibeCiphertext : venueVisit.getIbeCiphertextEntries()) {
 				byte[] msg_p = decryptInternal(ibeCiphertext, secretKeyForIdentity, eventInfo.getIdentity());
 				if (msg_p == null) continue;
 
@@ -117,7 +125,7 @@ public class CryptoUtils {
 
 		//Additional verification
 		Fr r_p = new Fr();
-		r_p.setHashOf(concatenate(x_p, concatenate(identity, msg_p)));
+		r_p.setHashOf(concatenate(x_p, identity, msg_p));
 
 		G2 c1_p = new G2();
 		Mcl.mul(c1_p, baseG2(), r_p);
@@ -137,7 +145,7 @@ public class CryptoUtils {
 		byte[] x = randombytes_buf();
 
 		Fr r = new Fr();
-		r.setHashOf(concatenate(x, concatenate(identity, message)));
+		r.setHashOf(concatenate(x, identity, message));
 
 		G2 c1 = new G2();
 		Mcl.mul(c1, baseG2(), r);
@@ -161,14 +169,43 @@ public class CryptoUtils {
 		return new IBECiphertext(c1.serialize(), c2, c3, nonce);
 	}
 
-	public byte[] generateIdentity(Qr.QRCodeContent qrCodeContent, byte[] nonce1, byte[] nonce2, int hour) {
+	public byte[] generateIdentityV2(QrV2.QRCodeContent qrCodeContent, byte[] nonce1, byte[] nonce2, int hour) {
 		byte[] hash1 = crypto_hash_sha256(concatenate(qrCodeContent.toByteArray(), nonce1));
-		return crypto_hash_sha256(concatenate(hash1, concatenate(nonce2, String.valueOf(hour).getBytes())));
+		return crypto_hash_sha256(concatenate(hash1, nonce2, String.valueOf(hour).getBytes()));
 	}
 
-	public byte[] generateIdentity(int hour, VenueInfo venueInfo) {
+	public byte[] generateIdentityV2(int hour, VenueInfo venueInfo) {
 		byte[] hash1 = crypto_hash_sha256(concatenate(venueInfoToInfoBytes(venueInfo), venueInfo.getNonce1()));
-		return crypto_hash_sha256(concatenate(hash1, concatenate(venueInfo.getNonce2(), String.valueOf(hour).getBytes())));
+		return crypto_hash_sha256(concatenate(hash1, venueInfo.getNonce2(), String.valueOf(hour).getBytes()));
+	}
+
+	public byte[] generateIdentityV3(QrV3.QRCodePayload qrCodePayload, int hour) {
+		return generateIdentityV3(qrCodePayload.toByteArray(), hour);
+	}
+
+	public byte[] generateIdentityV3(byte[] infoBytes, int hour) {
+		NoncesAndNotificationKey cryptoData = getNoncesAndNotificationKey(infoBytes);
+		byte[] preid = crypto_hash_sha256(concatenate("CN-PREID".getBytes(), infoBytes, cryptoData.nonce1));
+
+		return crypto_hash_sha256(concatenate("CN-ID".getBytes(), preid, String.valueOf(3600).getBytes(),
+				String.valueOf(hour).getBytes(), cryptoData.nonce2));
+	}
+
+	public NoncesAndNotificationKey getNoncesAndNotificationKey(QrV3.QRCodePayload qrCodePayload) {
+		return getNoncesAndNotificationKey(qrCodePayload.toByteArray());
+	}
+
+	public NoncesAndNotificationKey getNoncesAndNotificationKey(byte[] infoBytes) {
+		try {
+			byte[] hkdfOutput =
+					Hkdf.computeHkdf("HMACSHA256", infoBytes, new byte[0], "CrowdNotifier_v2".getBytes(), 96);
+			byte[] nonce1 = Arrays.copyOfRange(hkdfOutput, 0, 32);
+			byte[] nonce2 = Arrays.copyOfRange(hkdfOutput, 32, 64);
+			byte[] notificationKey = Arrays.copyOfRange(hkdfOutput, 64, 96);
+			return new NoncesAndNotificationKey(nonce1, nonce2, notificationKey);
+		} catch (GeneralSecurityException e) {
+			throw new RuntimeException("HKDF threw GeneralSecurityException");
+		}
 	}
 
 	private byte[] crypto_secretbox_easy(byte[] secretKey, byte[] message, byte[] nonce) {
@@ -219,11 +256,11 @@ public class CryptoUtils {
 	}
 
 	private byte[] venueInfoToInfoBytes(VenueInfo venueInfo) {
-		Qr.QRCodeContent qrCodeContent = Qr.QRCodeContent.newBuilder()
+		QrV2.QRCodeContent qrCodeContent = QrV2.QRCodeContent.newBuilder()
 				.setName(venueInfo.getName())
 				.setLocation(venueInfo.getLocation())
 				.setRoom(venueInfo.getRoom())
-				.setVenueType(venueInfo.getVenueType())
+				.setVenueTypeValue(venueInfo.getVenueType().getNumber())
 				.setNotificationKey(ByteString.copyFrom(venueInfo.getNotificationKey()))
 				.setValidFrom(venueInfo.getValidFrom())
 				.setValidTo(venueInfo.getValidTo())
@@ -231,12 +268,16 @@ public class CryptoUtils {
 		return qrCodeContent.toByteArray();
 	}
 
-	private byte[] concatenate(byte[] a, byte[] b) {
+	private byte[] concatenate(byte[]... byteArrays) {
 		try {
-			ByteArrayOutputStream outputStream = new ByteArrayOutputStream(a.length + b.length);
-			outputStream.write(a);
-			outputStream.write(b);
-			return outputStream.toByteArray();
+			byte[] result = new byte[0];
+			for (int i = 0; i < byteArrays.length; i++) {
+				ByteArrayOutputStream outputStream = new ByteArrayOutputStream(result.length + byteArrays[i].length);
+				outputStream.write(result);
+				outputStream.write(byteArrays[i]);
+				result = outputStream.toByteArray();
+			}
+			return result;
 		} catch (IOException e) {
 			throw new RuntimeException("Byte array concatenation failed");
 		}
@@ -253,6 +294,19 @@ public class CryptoUtils {
 				"927553665492332455747201965776037880757740193453592970025027978" +
 				"793976877002675564980949289727957565575433344219582");
 		return baseG2;
+	}
+
+	public class NoncesAndNotificationKey {
+		public final byte[] nonce1;
+		public final byte[] nonce2;
+		public final byte[] notificationKey;
+
+		public NoncesAndNotificationKey(byte[] nonce1, byte[] nonce2, byte[] notificationKey) {
+			this.nonce1 = nonce1;
+			this.nonce2 = nonce2;
+			this.notificationKey = notificationKey;
+		}
+
 	}
 
 }

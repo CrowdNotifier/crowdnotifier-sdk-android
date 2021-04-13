@@ -5,15 +5,16 @@ public class VenueInfo {
 	private String location;
 	private String room;
 	private byte[] notificationKey;
-	private Qr.QRCodeContent.VenueType venueType;
+	private QrV3.VenueType venueType;
 	private byte[] masterPublicKey;
 	private byte[] nonce1;
 	private byte[] nonce2;
-	long validFrom;
-	long validTo;
+	private long validFrom;
+	private long validTo;
+	private byte[] infoBytes; // if null -> old CrowdNotifier QR Code Version (2)
 
-	public VenueInfo(String name, String location, String room, byte[] notificationKey, Qr.QRCodeContent.VenueType venueType,
-			byte[] masterPublicKey, byte[] nonce1, byte[] nonce2, long validFrom, long validTo) {
+	public VenueInfo(String name, String location, String room, byte[] notificationKey, QrV3.VenueType venueType,
+			byte[] masterPublicKey, byte[] nonce1, byte[] nonce2, long validFrom, long validTo, byte[] infoBytes) {
 		this.name = name;
 		this.location = location;
 		this.room = room;
@@ -24,6 +25,7 @@ public class VenueInfo {
 		this.nonce2 = nonce2;
 		this.validFrom = validFrom;
 		this.validTo = validTo;
+		this.infoBytes = infoBytes;
 	}
 
 
@@ -43,7 +45,7 @@ public class VenueInfo {
 		return room;
 	}
 
-	public Qr.QRCodeContent.VenueType getVenueType() {
+	public QrV3.VenueType getVenueType() {
 		return venueType;
 	}
 
@@ -77,6 +79,10 @@ public class VenueInfo {
 
 	public long getValidTo() {
 		return validTo;
+	}
+
+	public byte[] getInfoBytes() {
+		return infoBytes;
 	}
 
 }
