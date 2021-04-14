@@ -12,6 +12,7 @@ import java.util.List;
 import com.google.crypto.tink.subtle.Hkdf;
 import com.google.gson.Gson;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.goterl.lazycode.lazysodium.LazySodiumAndroid;
 import com.goterl.lazycode.lazysodium.SodiumAndroid;
 import com.goterl.lazycode.lazysodium.interfaces.Box;
@@ -91,13 +92,22 @@ public class CryptoUtils {
 
 				Payload payload = new Gson().fromJson(new String(msg_p), Payload.class);
 
-				byte[] decryptedMessage = crypto_secretbox_open_easy(payload.getNotificationKey(), eventInfo.getEncryptedMessage(),
-						eventInfo.getNonce());
+				byte[] decryptedMessage =
+						crypto_secretbox_open_easy(payload.getNotificationKey(), eventInfo.getEncryptedAssociatedData(),
+								eventInfo.getNonce());
 
-				String decryptedMessageString = new String(decryptedMessage);
+				String decryptedMessageString;
+				byte[] countryData = null;
+				try {
+					BackendV3.AssociatedData associatedData = BackendV3.AssociatedData.parseFrom(decryptedMessage);
+					decryptedMessageString = associatedData.getMessage().toStringUtf8();
+					countryData = associatedData.getCountryData().toByteArray();
+				} catch (InvalidProtocolBufferException e) {
+					decryptedMessageString = new String(decryptedMessage);
+				}
 
 				ExposureEvent exposureEvent = new ExposureEvent(venueVisit.getId(), payload.getArrivalTime(),
-						payload.getDepartureTime(), decryptedMessageString);
+						payload.getDepartureTime(), decryptedMessageString, countryData);
 
 				exposureEvents.add(exposureEvent);
 				break;

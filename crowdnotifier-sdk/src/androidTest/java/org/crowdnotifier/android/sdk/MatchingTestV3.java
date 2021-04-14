@@ -28,6 +28,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -72,10 +73,11 @@ public class MatchingTestV3 {
 		long exposureStart = currentTime - ONE_HOUR_IN_MILLIS;
 		long exposureEnd = currentTime;
 		String exposureMessage = "This is a message.";
+		byte[] countryData = getRandomValue(200);
 
 		// Sets up location owner, adds User-Check-In, generates PreTraces and Traces and returns a list of ProblematicEventInfos
 		List<ProblematicEventInfo> publishedSKs =
-				generateVisitAndExposure(arrivalTime, departureTime, exposureStart, exposureEnd, exposureMessage);
+				generateVisitAndExposure(arrivalTime, departureTime, exposureStart, exposureEnd, exposureMessage, countryData);
 
 		//User matches Traces with VenueVisits stored in App
 		List<ExposureEvent> exposureEvents = CrowdNotifier.checkForMatches(publishedSKs, context);
@@ -85,6 +87,7 @@ public class MatchingTestV3 {
 		assertEquals(arrivalTime, exposureEvents.get(0).getStartTime());
 		assertEquals(departureTime, exposureEvents.get(0).getEndTime());
 		assertEquals(exposureMessage, exposureEvents.get(0).getMessage());
+		assertArrayEquals(countryData, exposureEvents.get(0).getCountryData());
 	}
 
 	@Test
@@ -96,10 +99,11 @@ public class MatchingTestV3 {
 		long exposureStart = currentTime - 2 * ONE_HOUR_IN_MILLIS;
 		long exposureEnd = currentTime - ONE_HOUR_IN_MILLIS - 1;
 		String exposureMessage = "This is a message.";
+		byte[] countryData = getRandomValue(200);
 
 		// Sets up location owner, adds User-Check-In, generates PreTraces and Traces and returns a list of ProblematicEventInfos
 		List<ProblematicEventInfo> publishedSKs =
-				generateVisitAndExposure(arrivalTime, departureTime, exposureStart, exposureEnd, exposureMessage);
+				generateVisitAndExposure(arrivalTime, departureTime, exposureStart, exposureEnd, exposureMessage, countryData);
 
 		//User matches Traces with VenueVisits stored in App
 		List<ExposureEvent> exposureEvents = CrowdNotifier.checkForMatches(publishedSKs, context);
@@ -110,7 +114,7 @@ public class MatchingTestV3 {
 
 
 	private List<ProblematicEventInfo> generateVisitAndExposure(long arrivalTime, long departureTime, long exposureStart,
-			long exposureEnd, String message) throws QrUtils.QRException, InvalidProtocolBufferException {
+			long exposureEnd, String message, byte[] countryData) throws QrUtils.QRException, InvalidProtocolBufferException {
 		long currentTime = System.currentTimeMillis();
 
 		//Setup Location Owner
@@ -132,7 +136,8 @@ public class MatchingTestV3 {
 		CrowdNotifier.addCheckIn(arrivalTime, departureTime, venueInfo, context);
 
 		//Venue Owner Creates PreTraces
-		List<BackendV3.PreTraceWithProof> preTraceWithProofList = createPreTrace(qrTrace, exposureStart, exposureEnd, message);
+		List<BackendV3.PreTraceWithProof> preTraceWithProofList =
+				createPreTrace(qrTrace, exposureStart, exposureEnd, message, countryData);
 
 		//Health Authority generates Traces
 		List<ProblematicEventInfo> publishedSKs = new ArrayList<>();
@@ -141,7 +146,7 @@ public class MatchingTestV3 {
 
 			publishedSKs.add(new ProblematicEventInfo(trace.getIdentity().toByteArray(),
 					trace.getSecretKeyForIdentity().toByteArray(), trace.getStartTime(), trace.getEndTime(),
-					trace.getEncryptedMessage().toByteArray(), trace.getNonce().toByteArray()));
+					trace.getEncryptedAssociatedData().toByteArray(), trace.getNonce().toByteArray()));
 		}
 		return publishedSKs;
 	}
@@ -184,8 +189,9 @@ public class MatchingTestV3 {
 		if (msg_dec == null) throw new RuntimeException("Health Authority could not verify Trace");
 
 		byte[] nonce = getRandomValue(Box.NONCEBYTES);
-		byte[] encryptedMessage = encryptMessage(preTraceWithProof.getPreTrace().getNotificationKey().toByteArray(),
-				preTraceWithProof.getPreTrace().getMessage(), nonce);
+		byte[] encryptedAssociatedData = encryptAssociatedData(preTraceWithProof.getPreTrace().getNotificationKey().toByteArray(),
+				preTraceWithProof.getPreTrace().getAssociatedData().getMessage().toStringUtf8(),
+				preTraceWithProof.getPreTrace().getAssociatedData().getCountryData().toByteArray(), nonce);
 
 		return BackendV3.Trace.newBuilder()
 				.setIdentity(preTrace.getIdentity())
@@ -193,12 +199,12 @@ public class MatchingTestV3 {
 				.setStartTime(preTraceWithProof.getStartTime())
 				.setEndTime(preTraceWithProof.getEndTime())
 				.setNonce(ByteString.copyFrom(nonce))
-				.setEncryptedMessage(ByteString.copyFrom(encryptedMessage))
+				.setEncryptedAssociatedData(ByteString.copyFrom(encryptedAssociatedData))
 				.build();
 	}
 
 	private List<BackendV3.PreTraceWithProof> createPreTrace(BackendV3.QRCodeTrace qrCodeTrace, long startTime, long endTime,
-			String message) throws InvalidProtocolBufferException {
+			String message, byte[] countryData) throws InvalidProtocolBufferException {
 
 		QrV3.QRCodePayload qrCodePayload = QrV3.QRCodePayload.parseFrom(qrCodeTrace.getQrCodePayload());
 
@@ -218,13 +224,19 @@ public class MatchingTestV3 {
 
 			G1 partialSecretKeyForIdentityOfLocation = keyDer(masterSecretKeyLocation, identity);
 
+			BackendV3.AssociatedData associatedData = BackendV3.AssociatedData.newBuilder()
+					.setVersion(QR_CODE_VERSION)
+					.setMessage(ByteString.copyFrom(message.getBytes()))
+					.setCountryData(ByteString.copyFrom(countryData))
+					.build();
+
 			BackendV3.PreTrace preTrace = BackendV3.PreTrace.newBuilder()
 					.setIdentity(ByteString.copyFrom(identity))
 					.setCipherTextHealthAuthority(qrCodeTrace.getCipherTextHealthAuthority())
 					.setPartialSecretKeyForIdentityOfLocation(
 							ByteString.copyFrom(partialSecretKeyForIdentityOfLocation.serialize()))
 					.setNotificationKey(ByteString.copyFrom(cryptoData.notificationKey))
-					.setMessage(message)
+					.setAssociatedData(associatedData)
 					.build();
 
 			BackendV3.TraceProof traceProof = BackendV3.TraceProof.newBuilder()
@@ -268,8 +280,14 @@ public class MatchingTestV3 {
 		return nonce;
 	}
 
-	private byte[] encryptMessage(byte[] secretKey, String message, byte[] nonce) {
-		byte[] messageBytes = message.getBytes();
+	private byte[] encryptAssociatedData(byte[] secretKey, String message, byte[] countryData, byte[] nonce) {
+		BackendV3.AssociatedData associatedData = BackendV3.AssociatedData.newBuilder()
+				.setMessage(ByteString.copyFrom(message.getBytes()))
+				.setCountryData(ByteString.copyFrom(countryData))
+				.setVersion(QR_CODE_VERSION)
+				.build();
+
+		byte[] messageBytes = associatedData.toByteArray();
 		byte[] encrytpedMessage = new byte[messageBytes.length + Box.MACBYTES];
 		sodium.crypto_secretbox_easy(encrytpedMessage, messageBytes, messageBytes.length, nonce, secretKey);
 		return encrytpedMessage;
