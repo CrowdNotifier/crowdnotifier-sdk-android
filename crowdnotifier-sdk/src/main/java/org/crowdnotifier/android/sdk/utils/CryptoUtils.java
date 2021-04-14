@@ -2,6 +2,8 @@ package org.crowdnotifier.android.sdk.utils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -187,8 +189,7 @@ public class CryptoUtils {
 		NoncesAndNotificationKey cryptoData = getNoncesAndNotificationKey(infoBytes);
 		byte[] preid = crypto_hash_sha256(concatenate("CN-PREID".getBytes(), infoBytes, cryptoData.nonce1));
 
-		return crypto_hash_sha256(concatenate("CN-ID".getBytes(), preid, String.valueOf(3600).getBytes(),
-				String.valueOf(hour).getBytes(), cryptoData.nonce2));
+		return crypto_hash_sha256(concatenate("CN-ID".getBytes(), preid, intToBytes(3600), longToBytes(hour), cryptoData.nonce2));
 	}
 
 	public NoncesAndNotificationKey getNoncesAndNotificationKey(QrV3.QRCodePayload qrCodePayload) {
@@ -206,6 +207,20 @@ public class CryptoUtils {
 		} catch (GeneralSecurityException e) {
 			throw new RuntimeException("HKDF threw GeneralSecurityException");
 		}
+	}
+
+	private byte[] longToBytes(long l) {
+		ByteBuffer byteBuffer = ByteBuffer.allocate(8);
+		byteBuffer.order(ByteOrder.BIG_ENDIAN);
+		byteBuffer.putLong(l);
+		return byteBuffer.array();
+	}
+
+	private byte[] intToBytes(int i) {
+		ByteBuffer byteBuffer = ByteBuffer.allocate(4);
+		byteBuffer.order(ByteOrder.BIG_ENDIAN);
+		byteBuffer.putInt(i);
+		return byteBuffer.array();
 	}
 
 	private byte[] crypto_secretbox_easy(byte[] secretKey, byte[] message, byte[] nonce) {

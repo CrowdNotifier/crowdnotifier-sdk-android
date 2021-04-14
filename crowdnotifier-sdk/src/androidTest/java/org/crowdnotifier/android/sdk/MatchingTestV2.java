@@ -33,7 +33,7 @@ import static org.junit.Assert.assertEquals;
 
 /**
  * This class implements tests to validate the cryptographic operations in the app. To do so the test implements all cryptographic
- * computations that are normally done in the BackendV2.
+ * computations that are normally done in the Backend.
  */
 @RunWith(AndroidJUnit4.class)
 public class MatchingTestV2 {
