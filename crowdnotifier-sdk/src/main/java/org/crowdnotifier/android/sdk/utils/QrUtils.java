@@ -43,9 +43,6 @@ public class QrUtils {
 			QrV3.TraceLocation locationData = qrCodeEntry.getLocationData();
 			QrV3.CrowdNotifierData crowdNotifierData = qrCodeEntry.getCrowdNotifierData();
 
-			//TODO: What if this payload is not NotifyMeData?
-			QrV3.NotifyMeLocationData notifyMeLocationData = QrV3.NotifyMeLocationData.parseFrom(qrCodeEntry.getCountryData());
-
 			if (System.currentTimeMillis() < locationData.getStartTimestamp()) {
 				throw new NotYetValidException();
 			}
@@ -55,10 +52,10 @@ public class QrUtils {
 
 			CryptoUtils.NoncesAndNotificationKey cryptoData = CryptoUtils.getInstance().getNoncesAndNotificationKey(qrCodeEntry);
 
-			return new VenueInfo(locationData.getDescription(), locationData.getAddress(), notifyMeLocationData.getRoom(),
-					cryptoData.notificationKey, notifyMeLocationData.getType(), crowdNotifierData.getPublicKey().toByteArray(),
-					cryptoData.nonce1, cryptoData.nonce2, locationData.getStartTimestamp(), locationData.getEndTimestamp(),
-					qrCodeEntry.toByteArray());
+			return new VenueInfo(locationData.getDescription(), locationData.getAddress(), cryptoData.notificationKey,
+					crowdNotifierData.getPublicKey().toByteArray(), cryptoData.nonce1, cryptoData.nonce2,
+					locationData.getStartTimestamp(), locationData.getEndTimestamp(), qrCodeEntry.toByteArray(),
+					qrCodeEntry.getCountryData().toByteArray());
 		} catch (InvalidProtocolBufferException e) {
 			throw new InvalidQRCodeFormatException();
 		}
@@ -78,10 +75,16 @@ public class QrUtils {
 				throw new NotValidAnymoreException();
 			}
 
-			return new VenueInfo(qrCode.getName(), qrCode.getLocation(), qrCode.getRoom(),
-					qrCode.getNotificationKey().toByteArray(), QrV3.VenueType.forNumber(qrCode.getVenueTypeValue()),
+			QrV3.NotifyMeLocationData notifyMeLocationData = QrV3.NotifyMeLocationData.newBuilder()
+					.setRoom(qrCode.getRoom())
+					.setVersion(2)
+					.setTypeValue(qrCode.getVenueTypeValue())
+					.build();
+
+			return new VenueInfo(qrCode.getName(), qrCode.getLocation(), qrCode.getNotificationKey().toByteArray(),
 					qrCodeEntry.getMasterPublicKey().toByteArray(), qrCodeEntry.getEntryProof().getNonce1().toByteArray(),
-					qrCodeEntry.getEntryProof().getNonce2().toByteArray(), qrCode.getValidFrom(), qrCode.getValidTo(), null);
+					qrCodeEntry.getEntryProof().getNonce2().toByteArray(), qrCode.getValidFrom(), qrCode.getValidTo(), null,
+					notifyMeLocationData.toByteArray());
 		} catch (InvalidProtocolBufferException e) {
 			throw new InvalidQRCodeFormatException();
 		}

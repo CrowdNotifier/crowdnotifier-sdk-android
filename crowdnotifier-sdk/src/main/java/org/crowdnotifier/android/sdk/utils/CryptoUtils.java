@@ -49,7 +49,7 @@ public class CryptoUtils {
 	public EncryptedVenueVisit getEncryptedVenueVisit(long arrivalTime, long departureTime, VenueInfo venueInfo) {
 
 		G2 masterPublicKey = new G2();
-		masterPublicKey.deserialize(venueInfo.getMasterPublicKey());
+		masterPublicKey.deserialize(venueInfo.getPublicKey());
 
 		//scan
 		ArrayList<IBECiphertext> ibeCiphertextsEntries = new ArrayList<>();
@@ -281,25 +281,30 @@ public class CryptoUtils {
 	}
 
 	private byte[] venueInfoToInfoBytes(VenueInfo venueInfo) {
-		QrV2.QRCodeContent qrCodeContent = QrV2.QRCodeContent.newBuilder()
-				.setName(venueInfo.getName())
-				.setLocation(venueInfo.getLocation())
-				.setRoom(venueInfo.getRoom())
-				.setVenueTypeValue(venueInfo.getVenueType().getNumber())
-				.setNotificationKey(ByteString.copyFrom(venueInfo.getNotificationKey()))
-				.setValidFrom(venueInfo.getValidFrom())
-				.setValidTo(venueInfo.getValidTo())
-				.build();
-		return qrCodeContent.toByteArray();
+		try {
+			QrV3.NotifyMeLocationData notifyMeLocationData = QrV3.NotifyMeLocationData.parseFrom(venueInfo.getCountryData());
+			QrV2.QRCodeContent qrCodeContent = QrV2.QRCodeContent.newBuilder()
+					.setName(venueInfo.getDescription())
+					.setLocation(venueInfo.getAddress())
+					.setRoom(notifyMeLocationData.getRoom())
+					.setVenueTypeValue(notifyMeLocationData.getType().getNumber())
+					.setNotificationKey(ByteString.copyFrom(venueInfo.getNotificationKey()))
+					.setValidFrom(venueInfo.getValidFrom())
+					.setValidTo(venueInfo.getValidTo())
+					.build();
+			return qrCodeContent.toByteArray();
+		} catch (InvalidProtocolBufferException e) {
+			throw new RuntimeException("VenueInfo CountryData contained invalid Bytes");
+		}
 	}
 
 	private byte[] concatenate(byte[]... byteArrays) {
 		try {
 			byte[] result = new byte[0];
-			for (int i = 0; i < byteArrays.length; i++) {
-				ByteArrayOutputStream outputStream = new ByteArrayOutputStream(result.length + byteArrays[i].length);
+			for (byte[] byteArray : byteArrays) {
+				ByteArrayOutputStream outputStream = new ByteArrayOutputStream(result.length + byteArray.length);
 				outputStream.write(result);
-				outputStream.write(byteArrays[i]);
+				outputStream.write(byteArray);
 				result = outputStream.toByteArray();
 			}
 			return result;
