@@ -12,7 +12,6 @@ message PreTrace {
   bytes identity = 1;
   bytes partialSecretKeyForIdentityOfLocation = 2;
   bytes cipherTextHealthAuthority = 3;
-  AssociatedData associatedData = 4;
   bytes notificationKey = 5;
 }
 
@@ -39,10 +38,3 @@ message Trace {
   bytes nonce = 5;
   bytes encryptedAssociatedData = 6;
 }
-
-message AssociatedData {
-  int32 version = 1;
-  bytes message = 2;
-  bytes countryData = 3;
-}
-

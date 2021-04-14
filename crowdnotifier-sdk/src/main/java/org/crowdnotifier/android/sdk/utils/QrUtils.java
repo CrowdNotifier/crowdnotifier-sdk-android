@@ -15,7 +15,6 @@ public class QrUtils {
 	private static final String QR_CODE_VERSION_2 = "2";
 	private static final String QR_CODE_VERSION_3 = "3";
 
-	//TODO: Would it maybe make sense to pass a list of Prefixes (for interoperability reasons)
 	public static VenueInfo getQrInfo(String qrCodeString, String expectedQrCodePrefix) throws QRException {
 
 		String[] fragmentSplit = qrCodeString.split("#");

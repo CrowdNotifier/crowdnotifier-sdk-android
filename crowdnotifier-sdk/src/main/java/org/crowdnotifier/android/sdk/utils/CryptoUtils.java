@@ -99,7 +99,7 @@ public class CryptoUtils {
 				String decryptedMessageString;
 				byte[] countryData = null;
 				try {
-					BackendV3.AssociatedData associatedData = BackendV3.AssociatedData.parseFrom(decryptedMessage);
+					QrV3.AssociatedData associatedData = QrV3.AssociatedData.parseFrom(decryptedMessage);
 					decryptedMessageString = associatedData.getMessage().toStringUtf8();
 					countryData = associatedData.getCountryData().toByteArray();
 				} catch (InvalidProtocolBufferException e) {

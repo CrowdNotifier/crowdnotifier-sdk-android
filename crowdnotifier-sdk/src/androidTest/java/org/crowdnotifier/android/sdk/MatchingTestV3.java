@@ -137,12 +137,12 @@ public class MatchingTestV3 {
 
 		//Venue Owner Creates PreTraces
 		List<BackendV3.PreTraceWithProof> preTraceWithProofList =
-				createPreTrace(qrTrace, exposureStart, exposureEnd, message, countryData);
+				createPreTrace(qrTrace, exposureStart, exposureEnd);
 
 		//Health Authority generates Traces
 		List<ProblematicEventInfo> publishedSKs = new ArrayList<>();
 		for (BackendV3.PreTraceWithProof preTraceWithProof : preTraceWithProofList) {
-			BackendV3.Trace trace = createTrace(preTraceWithProof, haKeyPair);
+			BackendV3.Trace trace = createTrace(preTraceWithProof, haKeyPair, message, countryData);
 
 			publishedSKs.add(new ProblematicEventInfo(trace.getIdentity().toByteArray(),
 					trace.getSecretKeyForIdentity().toByteArray(), trace.getStartTime(), trace.getEndTime(),
@@ -152,8 +152,8 @@ public class MatchingTestV3 {
 	}
 
 
-	private BackendV3.Trace createTrace(BackendV3.PreTraceWithProof preTraceWithProof, KeyPair haKeyPair)
-			throws InvalidProtocolBufferException {
+	private BackendV3.Trace createTrace(BackendV3.PreTraceWithProof preTraceWithProof, KeyPair haKeyPair, String message,
+			byte[] countryData) throws InvalidProtocolBufferException {
 
 		BackendV3.PreTrace preTrace = preTraceWithProof.getPreTrace();
 		BackendV3.TraceProof proof = preTraceWithProof.getProof();
@@ -190,8 +190,7 @@ public class MatchingTestV3 {
 
 		byte[] nonce = getRandomValue(Box.NONCEBYTES);
 		byte[] encryptedAssociatedData = encryptAssociatedData(preTraceWithProof.getPreTrace().getNotificationKey().toByteArray(),
-				preTraceWithProof.getPreTrace().getAssociatedData().getMessage().toStringUtf8(),
-				preTraceWithProof.getPreTrace().getAssociatedData().getCountryData().toByteArray(), nonce);
+				message, countryData, nonce);
 
 		return BackendV3.Trace.newBuilder()
 				.setIdentity(preTrace.getIdentity())
@@ -203,8 +202,8 @@ public class MatchingTestV3 {
 				.build();
 	}
 
-	private List<BackendV3.PreTraceWithProof> createPreTrace(BackendV3.QRCodeTrace qrCodeTrace, long startTime, long endTime,
-			String message, byte[] countryData) throws InvalidProtocolBufferException {
+	private List<BackendV3.PreTraceWithProof> createPreTrace(BackendV3.QRCodeTrace qrCodeTrace, long startTime, long endTime)
+			throws InvalidProtocolBufferException {
 
 		QrV3.QRCodePayload qrCodePayload = QrV3.QRCodePayload.parseFrom(qrCodeTrace.getQrCodePayload());
 
@@ -224,19 +223,12 @@ public class MatchingTestV3 {
 
 			G1 partialSecretKeyForIdentityOfLocation = keyDer(masterSecretKeyLocation, identity);
 
-			BackendV3.AssociatedData associatedData = BackendV3.AssociatedData.newBuilder()
-					.setVersion(QR_CODE_VERSION)
-					.setMessage(ByteString.copyFrom(message.getBytes()))
-					.setCountryData(ByteString.copyFrom(countryData))
-					.build();
-
 			BackendV3.PreTrace preTrace = BackendV3.PreTrace.newBuilder()
 					.setIdentity(ByteString.copyFrom(identity))
 					.setCipherTextHealthAuthority(qrCodeTrace.getCipherTextHealthAuthority())
 					.setPartialSecretKeyForIdentityOfLocation(
 							ByteString.copyFrom(partialSecretKeyForIdentityOfLocation.serialize()))
 					.setNotificationKey(ByteString.copyFrom(cryptoData.notificationKey))
-					.setAssociatedData(associatedData)
 					.build();
 
 			BackendV3.TraceProof traceProof = BackendV3.TraceProof.newBuilder()
@@ -281,7 +273,7 @@ public class MatchingTestV3 {
 	}
 
 	private byte[] encryptAssociatedData(byte[] secretKey, String message, byte[] countryData, byte[] nonce) {
-		BackendV3.AssociatedData associatedData = BackendV3.AssociatedData.newBuilder()
+		QrV3.AssociatedData associatedData = QrV3.AssociatedData.newBuilder()
 				.setMessage(ByteString.copyFrom(message.getBytes()))
 				.setCountryData(ByteString.copyFrom(countryData))
 				.setVersion(QR_CODE_VERSION)

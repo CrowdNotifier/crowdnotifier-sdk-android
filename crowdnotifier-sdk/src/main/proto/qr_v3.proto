@@ -54,3 +54,10 @@ enum VenueType {
   KITCHEN_AREA = 9;
   OFFICE_SPACE = 10;
 }
+
+message AssociatedData {
+  int32 version = 1;
+  bytes message = 2;
+  bytes countryData = 3;
+}
+
