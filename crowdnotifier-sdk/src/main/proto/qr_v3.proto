@@ -57,7 +57,7 @@ enum VenueType {
 
 message AssociatedData {
   int32 version = 1;
-  bytes message = 2;
+  string message = 2;
   bytes countryData = 3;
 }
 

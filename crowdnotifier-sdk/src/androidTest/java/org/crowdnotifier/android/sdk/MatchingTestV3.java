@@ -274,7 +274,7 @@ public class MatchingTestV3 {
 
 	private byte[] encryptAssociatedData(byte[] secretKey, String message, byte[] countryData, byte[] nonce) {
 		QrV3.AssociatedData associatedData = QrV3.AssociatedData.newBuilder()
-				.setMessage(ByteString.copyFrom(message.getBytes()))
+				.setMessage(message)
 				.setCountryData(ByteString.copyFrom(countryData))
 				.setVersion(QR_CODE_VERSION)
 				.build();

@@ -100,7 +100,7 @@ public class CryptoUtils {
 				byte[] countryData = null;
 				try {
 					QrV3.AssociatedData associatedData = QrV3.AssociatedData.parseFrom(decryptedMessage);
-					decryptedMessageString = associatedData.getMessage().toStringUtf8();
+					decryptedMessageString = associatedData.getMessage();
 					countryData = associatedData.getCountryData().toByteArray();
 				} catch (InvalidProtocolBufferException e) {
 					decryptedMessageString = new String(decryptedMessage);
