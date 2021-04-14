@@ -209,7 +209,7 @@ public class CryptoUtils {
 	public NoncesAndNotificationKey getNoncesAndNotificationKey(byte[] infoBytes) {
 		try {
 			byte[] hkdfOutput =
-					Hkdf.computeHkdf("HMACSHA256", infoBytes, new byte[0], "CrowdNotifier_v2".getBytes(), 96);
+					Hkdf.computeHkdf("HMACSHA256", infoBytes, new byte[0], "CrowdNotifier_v3".getBytes(), 96);
 			byte[] nonce1 = Arrays.copyOfRange(hkdfOutput, 0, 32);
 			byte[] nonce2 = Arrays.copyOfRange(hkdfOutput, 32, 64);
 			byte[] notificationKey = Arrays.copyOfRange(hkdfOutput, 64, 96);
