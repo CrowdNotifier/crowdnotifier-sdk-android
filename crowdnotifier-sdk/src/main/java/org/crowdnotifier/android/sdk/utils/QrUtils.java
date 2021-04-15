@@ -42,10 +42,10 @@ public class QrUtils {
 			QrV3.TraceLocation locationData = qrCodeEntry.getLocationData();
 			QrV3.CrowdNotifierData crowdNotifierData = qrCodeEntry.getCrowdNotifierData();
 
-			if (System.currentTimeMillis() < locationData.getStartTimestamp()) {
+			if (System.currentTimeMillis() / 1000 < locationData.getStartTimestamp()) {
 				throw new NotYetValidException();
 			}
-			if (System.currentTimeMillis() > locationData.getEndTimestamp()) {
+			if (System.currentTimeMillis() / 1000 > locationData.getEndTimestamp()) {
 				throw new NotValidAnymoreException();
 			}
 

@@ -42,8 +42,8 @@ public class MatchingTestV3 {
 	private SodiumAndroid sodium;
 	private CryptoUtils cryptoUtils;
 	KeyPair haKeyPair;
-	private static final long ONE_HOUR_IN_MILLIS = 60 * 60 * 1000L;
-	private static final long ONE_DAY_IN_MILLIS = 24 * ONE_HOUR_IN_MILLIS;
+	private static final long ONE_HOUR_IN_SECONDS = 60 * 60;
+	private static final long ONE_DAY_IN_SECONDS = 24 * ONE_HOUR_IN_SECONDS;
 	private static final int QR_CODE_VERSION = 3;
 
 
@@ -67,10 +67,10 @@ public class MatchingTestV3 {
 	@Test
 	public void testMatching() throws QrUtils.QRException, InvalidProtocolBufferException {
 
-		long currentTime = System.currentTimeMillis();
-		long arrivalTime = currentTime - ONE_HOUR_IN_MILLIS;
-		long departureTime = currentTime + ONE_HOUR_IN_MILLIS;
-		long exposureStart = currentTime - ONE_HOUR_IN_MILLIS;
+		long currentTime = System.currentTimeMillis() / 1000;
+		long arrivalTime = currentTime - ONE_HOUR_IN_SECONDS;
+		long departureTime = currentTime + ONE_HOUR_IN_SECONDS;
+		long exposureStart = currentTime - ONE_HOUR_IN_SECONDS;
 		long exposureEnd = currentTime;
 		String exposureMessage = "This is a message.";
 		byte[] countryData = getRandomValue(200);
@@ -93,11 +93,11 @@ public class MatchingTestV3 {
 	@Test
 	public void testNoMatching() throws QrUtils.QRException, InvalidProtocolBufferException {
 
-		long currentTime = System.currentTimeMillis();
-		long arrivalTime = currentTime - ONE_HOUR_IN_MILLIS;
-		long departureTime = currentTime + ONE_HOUR_IN_MILLIS;
-		long exposureStart = currentTime - 2 * ONE_HOUR_IN_MILLIS;
-		long exposureEnd = currentTime - ONE_HOUR_IN_MILLIS - 1;
+		long currentTime = System.currentTimeMillis() / 1000;
+		long arrivalTime = currentTime - ONE_HOUR_IN_SECONDS;
+		long departureTime = currentTime + ONE_HOUR_IN_SECONDS;
+		long exposureStart = currentTime - 2 * ONE_HOUR_IN_SECONDS;
+		long exposureEnd = currentTime - ONE_HOUR_IN_SECONDS - 1;
 		String exposureMessage = "This is a message.";
 		byte[] countryData = getRandomValue(200);
 
@@ -115,13 +115,13 @@ public class MatchingTestV3 {
 
 	private List<ProblematicEventInfo> generateVisitAndExposure(long arrivalTime, long departureTime, long exposureStart,
 			long exposureEnd, String message, byte[] countryData) throws QrUtils.QRException, InvalidProtocolBufferException {
-		long currentTime = System.currentTimeMillis();
+		long currentTime = System.currentTimeMillis() / 1000;
 
 		//Setup Location Owner
 		byte[] cryptographicSeed = getRandomValue(32);
 
-		long qrCodeValidFrom = currentTime - ONE_DAY_IN_MILLIS;
-		long qrCodeValidTo = currentTime + ONE_DAY_IN_MILLIS;
+		long qrCodeValidFrom = currentTime - ONE_DAY_IN_SECONDS;
+		long qrCodeValidTo = currentTime + ONE_DAY_IN_SECONDS;
 		Location location = new Location(haKeyPair.publicKey, QrV3.VenueType.OTHER, "Name", "Location",
 				"Room", cryptographicSeed, qrCodeValidFrom, qrCodeValidTo);
 
