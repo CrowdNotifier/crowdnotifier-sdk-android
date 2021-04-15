@@ -19,6 +19,7 @@ import com.herumi.mcl.G2;
 import com.herumi.mcl.Mcl;
 
 import org.crowdnotifier.android.sdk.model.*;
+import org.crowdnotifier.android.sdk.model.v2.ProtoV2;
 import org.crowdnotifier.android.sdk.utils.CryptoUtils;
 import org.crowdnotifier.android.sdk.utils.QrUtils;
 import org.junit.Before;
@@ -119,10 +120,10 @@ public class MatchingTestV2 {
 
 		long qrCodeValidFrom = currentTime - ONE_DAY_IN_MILLIS;
 		long qrCodeValidTo = currentTime + ONE_DAY_IN_MILLIS;
-		Location location = new Location(haKeyPair.publicKey, QrV2.QRCodeContent.VenueType.OTHER, "Name", "Location",
+		Location location = new Location(haKeyPair.publicKey, ProtoV2.QRCodeContent.VenueType.OTHER, "Name", "Location",
 				"Room", notificationKey, qrCodeValidFrom, qrCodeValidTo);
-		BackendV2.QRCodeTraceV2 qrTrace = location.getQrCodeTrace();
-		QrV2.QRCodeEntry qrEntry = location.getQrCodeEntry();
+		ProtoV2.QRCodeTraceV2 qrTrace = location.getQrCodeTrace();
+		ProtoV2.QRCodeEntry qrEntry = location.getQrCodeEntry();
 
 		//User checks in with App
 		String urlPrefix = "https://test.com";
@@ -132,13 +133,13 @@ public class MatchingTestV2 {
 		CrowdNotifier.addCheckIn(arrivalTime, departureTime, venueInfo, context);
 
 		//Venue Owner Creates PreTraces
-		List<BackendV2.PreTraceWithProofV2> preTraceWithProofList =
+		List<ProtoV2.PreTraceWithProofV2> preTraceWithProofList =
 				createPreTrace(qrTrace, exposureStart, exposureEnd, notificationKey, message);
 
 		//Health Authority generates Traces
 		List<ProblematicEventInfo> publishedSKs = new ArrayList<>();
-		for (BackendV2.PreTraceWithProofV2 preTraceWithProof : preTraceWithProofList) {
-			BackendV2.TraceV2 trace = createTrace(preTraceWithProof, haKeyPair);
+		for (ProtoV2.PreTraceWithProofV2 preTraceWithProof : preTraceWithProofList) {
+			ProtoV2.TraceV2 trace = createTrace(preTraceWithProof, haKeyPair);
 
 			publishedSKs.add(new ProblematicEventInfo(trace.getIdentity().toByteArray(),
 					trace.getSecretKeyForIdentity().toByteArray(), trace.getStartTime(), trace.getEndTime(),
@@ -148,11 +149,11 @@ public class MatchingTestV2 {
 	}
 
 
-	private BackendV2.TraceV2 createTrace(BackendV2.PreTraceWithProofV2 preTraceWithProof, KeyPair haKeyPair)
+	private ProtoV2.TraceV2 createTrace(ProtoV2.PreTraceWithProofV2 preTraceWithProof, KeyPair haKeyPair)
 			throws InvalidProtocolBufferException {
 
-		BackendV2.PreTraceV2 preTrace = preTraceWithProof.getPreTrace();
-		BackendV2.TraceProofV2 proof = preTraceWithProof.getProof();
+		ProtoV2.PreTraceV2 preTrace = preTraceWithProof.getPreTrace();
+		ProtoV2.TraceProofV2 proof = preTraceWithProof.getProof();
 
 		byte[] ctxha = preTrace.getCipherTextHealthAuthority().toByteArray();
 		byte[] mskh_raw = new byte[ctxha.length - Box.SEALBYTES];
@@ -169,7 +170,7 @@ public class MatchingTestV2 {
 		G1 secretKeyForIdentity = new G1();
 		Mcl.add(secretKeyForIdentity, partialSecretKeyForIdentityOfLocation, partialSecretKeyForIdentityOfHealthAuthority);
 
-		QrV2.QRCodeContent qrCodeContent = QrV2.QRCodeContent.parseFrom(preTraceWithProof.getInfo());
+		ProtoV2.QRCodeContent qrCodeContent = ProtoV2.QRCodeContent.parseFrom(preTraceWithProof.getInfo());
 		byte[] identity = cryptoUtils.generateIdentityV2(qrCodeContent, proof.getNonce1().toByteArray(),
 				proof.getNonce2().toByteArray(), preTraceWithProof.getCounter());
 		if (!Arrays.equals(preTrace.getIdentity().toByteArray(), identity)) {
@@ -189,7 +190,7 @@ public class MatchingTestV2 {
 		byte[] encryptedMessage = encryptMessage(preTraceWithProof.getPreTrace().getNotificationKey().toByteArray(),
 				preTraceWithProof.getPreTrace().getMessage(), nonce);
 
-		return BackendV2.TraceV2.newBuilder()
+		return ProtoV2.TraceV2.newBuilder()
 				.setIdentity(preTrace.getIdentity())
 				.setSecretKeyForIdentity(ByteString.copyFrom(secretKeyForIdentity.serialize()))
 				.setStartTime(preTraceWithProof.getStartTime())
@@ -199,28 +200,28 @@ public class MatchingTestV2 {
 				.build();
 	}
 
-	private List<BackendV2.PreTraceWithProofV2> createPreTrace(BackendV2.QRCodeTraceV2 qrCodeTrace, long startTime, long endTime,
+	private List<ProtoV2.PreTraceWithProofV2> createPreTrace(ProtoV2.QRCodeTraceV2 qrCodeTrace, long startTime, long endTime,
 			byte[] notificationKey, String message) throws InvalidProtocolBufferException {
 
-		BackendV2.MasterTraceV2 masterTraceRecord = qrCodeTrace.getMasterTraceRecord();
+		ProtoV2.MasterTraceV2 masterTraceRecord = qrCodeTrace.getMasterTraceRecord();
 		G2 masterPublicKey = new G2();
 		masterPublicKey.deserialize(masterTraceRecord.getMasterPublicKey().toByteArray());
 
 		Fr masterSecretKeyLocation = new Fr();
 		masterSecretKeyLocation.deserialize(masterTraceRecord.getMasterSecretKeyLocation().toByteArray());
 
-		ArrayList<BackendV2.PreTraceWithProofV2> preTraceWithProofsList = new ArrayList<>();
+		ArrayList<ProtoV2.PreTraceWithProofV2> preTraceWithProofsList = new ArrayList<>();
 		ArrayList<Integer> affectedHours = cryptoUtils.getAffectedHours(startTime, endTime);
 		for (Integer hour : affectedHours) {
 
 			byte[] identity =
-					cryptoUtils.generateIdentityV2(QrV2.QRCodeContent.parseFrom(qrCodeTrace.getMasterTraceRecord().getInfo()),
+					cryptoUtils.generateIdentityV2(ProtoV2.QRCodeContent.parseFrom(qrCodeTrace.getMasterTraceRecord().getInfo()),
 							qrCodeTrace.getMasterTraceRecord().getNonce1().toByteArray(),
 							qrCodeTrace.getMasterTraceRecord().getNonce2().toByteArray(), hour);
 
 			G1 partialSecretKeyForIdentityOfLocation = keyDer(masterSecretKeyLocation, identity);
 
-			BackendV2.PreTraceV2 preTrace = BackendV2.PreTraceV2.newBuilder()
+			ProtoV2.PreTraceV2 preTrace = ProtoV2.PreTraceV2.newBuilder()
 					.setIdentity(ByteString.copyFrom(identity))
 					.setCipherTextHealthAuthority(masterTraceRecord.getCipherTextHealthAuthority())
 					.setPartialSecretKeyForIdentityOfLocation(
@@ -229,13 +230,13 @@ public class MatchingTestV2 {
 					.setMessage(message)
 					.build();
 
-			BackendV2.TraceProofV2 traceProof = BackendV2.TraceProofV2.newBuilder()
+			ProtoV2.TraceProofV2 traceProof = ProtoV2.TraceProofV2.newBuilder()
 					.setMasterPublicKey(masterTraceRecord.getMasterPublicKey())
 					.setNonce1(masterTraceRecord.getNonce1())
 					.setNonce2(masterTraceRecord.getNonce2())
 					.build();
 
-			BackendV2.PreTraceWithProofV2 preTraceWithProof = BackendV2.PreTraceWithProofV2.newBuilder()
+			ProtoV2.PreTraceWithProofV2 preTraceWithProof = ProtoV2.PreTraceWithProofV2.newBuilder()
 					.setPreTrace(preTrace)
 					.setProof(traceProof)
 					.setInfo(masterTraceRecord.getInfo())
@@ -287,7 +288,7 @@ public class MatchingTestV2 {
 		return new KeyPairMcl(publicKey, privateKey);
 	}
 
-	private ILocationData genCode(byte[] healthAuthorityPublicKey, QrV2.QRCodeContent qrCodeContent) {
+	private ILocationData genCode(byte[] healthAuthorityPublicKey, ProtoV2.QRCodeContent qrCodeContent) {
 		KeyPairMcl locationKeyPair = keyGen();
 		KeyPairMcl haKeyPair = keyGen();
 
@@ -301,12 +302,12 @@ public class MatchingTestV2 {
 				haKeyPair.privateKey.serialize().length,
 				healthAuthorityPublicKey);
 
-		QrV2.EntryProof entryProof = QrV2.EntryProof.newBuilder()
+		ProtoV2.EntryProof entryProof = ProtoV2.EntryProof.newBuilder()
 				.setNonce1(ByteString.copyFrom(nonce1))
 				.setNonce2(ByteString.copyFrom(nonce2))
 				.build();
 
-		BackendV2.MasterTraceV2 masterTrace = BackendV2.MasterTraceV2.newBuilder()
+		ProtoV2.MasterTraceV2 masterTrace = ProtoV2.MasterTraceV2.newBuilder()
 				.setMasterPublicKey(ByteString.copyFrom(masterPublicKey.serialize()))
 				.setMasterSecretKeyLocation(ByteString.copyFrom(locationKeyPair.privateKey.serialize()))
 				.setInfo(qrCodeContent.toByteString())
@@ -344,13 +345,13 @@ public class MatchingTestV2 {
 
 	private class Location {
 		byte[] healthAuthorityPublicKey;
-		QrV2.QRCodeContent qrCodeContent;
+		ProtoV2.QRCodeContent qrCodeContent;
 		ILocationData iLocationData;
 
-		public Location(byte[] healthAuthorityPublicKey, QrV2.QRCodeContent.VenueType venueType, String name, String location,
+		public Location(byte[] healthAuthorityPublicKey, ProtoV2.QRCodeContent.VenueType venueType, String name, String location,
 				String room, byte[] notificationKey, long validFrom, long validTo) {
 			this.healthAuthorityPublicKey = healthAuthorityPublicKey;
-			this.qrCodeContent = QrV2.QRCodeContent.newBuilder()
+			this.qrCodeContent = ProtoV2.QRCodeContent.newBuilder()
 					.setVenueType(venueType)
 					.setName(name)
 					.setLocation(location)
@@ -362,8 +363,8 @@ public class MatchingTestV2 {
 			this.iLocationData = genCode(healthAuthorityPublicKey, qrCodeContent);
 		}
 
-		public QrV2.QRCodeEntry getQrCodeEntry() {
-			return QrV2.QRCodeEntry.newBuilder()
+		public ProtoV2.QRCodeEntry getQrCodeEntry() {
+			return ProtoV2.QRCodeEntry.newBuilder()
 					.setData(qrCodeContent)
 					.setEntryProof(iLocationData.entryProof)
 					.setMasterPublicKey(ByteString.copyFrom(iLocationData.masterPublicKey.serialize()))
@@ -372,9 +373,9 @@ public class MatchingTestV2 {
 		}
 
 
-		public BackendV2.QRCodeTraceV2 getQrCodeTrace() {
+		public ProtoV2.QRCodeTraceV2 getQrCodeTrace() {
 
-			return BackendV2.QRCodeTraceV2.newBuilder()
+			return ProtoV2.QRCodeTraceV2.newBuilder()
 					.setVersion(2)
 					.setMasterTraceRecord(iLocationData.masterTrace)
 					.build();
@@ -385,10 +386,10 @@ public class MatchingTestV2 {
 
 	private class ILocationData {
 		G2 masterPublicKey;
-		QrV2.EntryProof entryProof;
-		BackendV2.MasterTraceV2 masterTrace;
+		ProtoV2.EntryProof entryProof;
+		ProtoV2.MasterTraceV2 masterTrace;
 
-		public ILocationData(G2 masterPublicKey, QrV2.EntryProof entryProof, BackendV2.MasterTraceV2 masterTrace) {
+		public ILocationData(G2 masterPublicKey, ProtoV2.EntryProof entryProof, ProtoV2.MasterTraceV2 masterTrace) {
 			this.masterPublicKey = masterPublicKey;
 			this.entryProof = entryProof;
 			this.masterTrace = masterTrace;

@@ -23,6 +23,8 @@ import com.herumi.mcl.GT;
 import com.herumi.mcl.Mcl;
 
 import org.crowdnotifier.android.sdk.model.*;
+import org.crowdnotifier.android.sdk.model.v2.ProtoV2;
+import org.crowdnotifier.android.sdk.model.v3.ProtoV3;
 
 public class CryptoUtils {
 
@@ -99,7 +101,7 @@ public class CryptoUtils {
 				String decryptedMessageString;
 				byte[] countryData = null;
 				try {
-					QrV3.AssociatedData associatedData = QrV3.AssociatedData.parseFrom(decryptedMessage);
+					ProtoV3.AssociatedData associatedData = ProtoV3.AssociatedData.parseFrom(decryptedMessage);
 					decryptedMessageString = associatedData.getMessage();
 					countryData = associatedData.getCountryData().toByteArray();
 				} catch (InvalidProtocolBufferException e) {
@@ -181,7 +183,7 @@ public class CryptoUtils {
 		return new IBECiphertext(c1.serialize(), c2, c3, nonce);
 	}
 
-	public byte[] generateIdentityV2(QrV2.QRCodeContent qrCodeContent, byte[] nonce1, byte[] nonce2, int hour) {
+	public byte[] generateIdentityV2(ProtoV2.QRCodeContent qrCodeContent, byte[] nonce1, byte[] nonce2, int hour) {
 		byte[] hash1 = crypto_hash_sha256(concatenate(qrCodeContent.toByteArray(), nonce1));
 		return crypto_hash_sha256(concatenate(hash1, nonce2, String.valueOf(hour).getBytes()));
 	}
@@ -191,7 +193,7 @@ public class CryptoUtils {
 		return crypto_hash_sha256(concatenate(hash1, venueInfo.getNonce2(), String.valueOf(hour).getBytes()));
 	}
 
-	public byte[] generateIdentityV3(QrV3.QRCodePayload qrCodePayload, long startOfInterval) {
+	public byte[] generateIdentityV3(ProtoV3.QRCodePayload qrCodePayload, long startOfInterval) {
 		return generateIdentityV3(qrCodePayload.toByteArray(), startOfInterval);
 	}
 
@@ -203,14 +205,14 @@ public class CryptoUtils {
 				concatenate("CN-ID".getBytes(), preid, intToBytes(3600), longToBytes(startOfInterval), cryptoData.nonce2));
 	}
 
-	public NoncesAndNotificationKey getNoncesAndNotificationKey(QrV3.QRCodePayload qrCodePayload) {
+	public NoncesAndNotificationKey getNoncesAndNotificationKey(ProtoV3.QRCodePayload qrCodePayload) {
 		return getNoncesAndNotificationKey(qrCodePayload.toByteArray());
 	}
 
-	public NoncesAndNotificationKey getNoncesAndNotificationKey(byte[] infoBytes) {
+	public NoncesAndNotificationKey getNoncesAndNotificationKey(byte[] qrCodePayload) {
 		try {
 			byte[] hkdfOutput =
-					Hkdf.computeHkdf("HMACSHA256", infoBytes, new byte[0], "CrowdNotifier_v3".getBytes(), 96);
+					Hkdf.computeHkdf("HMACSHA256", qrCodePayload, new byte[0], "CrowdNotifier_v3".getBytes(), 96);
 			byte[] nonce1 = Arrays.copyOfRange(hkdfOutput, 0, 32);
 			byte[] nonce2 = Arrays.copyOfRange(hkdfOutput, 32, 64);
 			byte[] notificationKey = Arrays.copyOfRange(hkdfOutput, 64, 96);
@@ -283,8 +285,8 @@ public class CryptoUtils {
 
 	private byte[] venueInfoToInfoBytes(VenueInfo venueInfo) {
 		try {
-			QrV3.NotifyMeLocationData notifyMeLocationData = QrV3.NotifyMeLocationData.parseFrom(venueInfo.getCountryData());
-			QrV2.QRCodeContent qrCodeContent = QrV2.QRCodeContent.newBuilder()
+			ProtoV3.NotifyMeLocationData notifyMeLocationData = ProtoV3.NotifyMeLocationData.parseFrom(venueInfo.getCountryData());
+			ProtoV2.QRCodeContent qrCodeContent = ProtoV2.QRCodeContent.newBuilder()
 					.setName(venueInfo.getDescription())
 					.setLocation(venueInfo.getAddress())
 					.setRoom(notifyMeLocationData.getRoom())

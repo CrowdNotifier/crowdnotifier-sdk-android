@@ -4,8 +4,8 @@ import android.util.Base64;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import org.crowdnotifier.android.sdk.model.QrV2;
-import org.crowdnotifier.android.sdk.model.QrV3;
+import org.crowdnotifier.android.sdk.model.v2.ProtoV2;
+import org.crowdnotifier.android.sdk.model.v3.ProtoV3;
 import org.crowdnotifier.android.sdk.model.VenueInfo;
 
 import static android.util.Base64.NO_PADDING;
@@ -38,9 +38,9 @@ public class QrUtils {
 		try {
 			int decodeFlags = Base64.NO_WRAP | Base64.URL_SAFE | NO_PADDING;
 			byte[] decoded = Base64.decode(qrCodeString, decodeFlags);
-			QrV3.QRCodePayload qrCodeEntry = QrV3.QRCodePayload.parseFrom(decoded);
-			QrV3.TraceLocation locationData = qrCodeEntry.getLocationData();
-			QrV3.CrowdNotifierData crowdNotifierData = qrCodeEntry.getCrowdNotifierData();
+			ProtoV3.QRCodePayload qrCodeEntry = ProtoV3.QRCodePayload.parseFrom(decoded);
+			ProtoV3.TraceLocation locationData = qrCodeEntry.getLocationData();
+			ProtoV3.CrowdNotifierData crowdNotifierData = qrCodeEntry.getCrowdNotifierData();
 
 			if (System.currentTimeMillis() / 1000 < locationData.getStartTimestamp()) {
 				throw new NotYetValidException();
@@ -64,8 +64,8 @@ public class QrUtils {
 		try {
 			int decodeFlags = Base64.NO_WRAP | Base64.URL_SAFE | NO_PADDING;
 			byte[] decoded = Base64.decode(qrCodeString, decodeFlags);
-			QrV2.QRCodeEntry qrCodeEntry = QrV2.QRCodeEntry.parseFrom(decoded);
-			QrV2.QRCodeContent qrCode = qrCodeEntry.getData();
+			ProtoV2.QRCodeEntry qrCodeEntry = ProtoV2.QRCodeEntry.parseFrom(decoded);
+			ProtoV2.QRCodeContent qrCode = qrCodeEntry.getData();
 
 			if (System.currentTimeMillis() < qrCode.getValidFrom()) {
 				throw new NotYetValidException();
@@ -74,7 +74,7 @@ public class QrUtils {
 				throw new NotValidAnymoreException();
 			}
 
-			QrV3.NotifyMeLocationData notifyMeLocationData = QrV3.NotifyMeLocationData.newBuilder()
+			ProtoV3.NotifyMeLocationData notifyMeLocationData = ProtoV3.NotifyMeLocationData.newBuilder()
 					.setRoom(qrCode.getRoom())
 					.setVersion(2)
 					.setTypeValue(qrCode.getVenueTypeValue())
