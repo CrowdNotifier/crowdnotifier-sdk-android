@@ -18,7 +18,7 @@ public class TestVectors {
 
 	public static class IdentityTest {
 		public byte[] infoBytes;
-		public int hour;
+		public int startOfInterval;
 		public byte[] identity;
 
 	}

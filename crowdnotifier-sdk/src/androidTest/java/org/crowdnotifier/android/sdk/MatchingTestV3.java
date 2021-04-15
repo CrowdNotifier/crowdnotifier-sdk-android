@@ -174,7 +174,7 @@ public class MatchingTestV3 {
 		Mcl.add(secretKeyForIdentity, partialSecretKeyForIdentityOfLocation, partialSecretKeyForIdentityOfHealthAuthority);
 
 		QrV3.QRCodePayload qrCodePayload = QrV3.QRCodePayload.parseFrom(preTraceWithProof.getQrCodePayload());
-		byte[] identity = cryptoUtils.generateIdentityV3(qrCodePayload, preTraceWithProof.getCounter());
+		byte[] identity = cryptoUtils.generateIdentityV3(qrCodePayload, preTraceWithProof.getStartOfInterval());
 		if (!Arrays.equals(preTrace.getIdentity().toByteArray(), identity)) {
 			return null;
 		}
@@ -219,7 +219,9 @@ public class MatchingTestV3 {
 		ArrayList<Integer> affectedHours = cryptoUtils.getAffectedHours(startTime, endTime);
 		for (Integer hour : affectedHours) {
 
-			byte[] identity = cryptoUtils.generateIdentityV3(qrCodePayload, hour);
+			long startOfInterval = hour * 3600;
+
+			byte[] identity = cryptoUtils.generateIdentityV3(qrCodePayload, startOfInterval);
 
 			G1 partialSecretKeyForIdentityOfLocation = keyDer(masterSecretKeyLocation, identity);
 
@@ -243,7 +245,7 @@ public class MatchingTestV3 {
 					.setQrCodePayload(qrCodeTrace.getQrCodePayload())
 					.setStartTime(startTime)
 					.setEndTime(endTime)
-					.setCounter(hour)
+					.setStartOfInterval(startOfInterval)
 					.build();
 			preTraceWithProofsList.add(preTraceWithProof);
 		}

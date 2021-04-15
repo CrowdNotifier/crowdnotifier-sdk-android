@@ -61,7 +61,7 @@ public class CryptoUtils {
 			if (venueInfo.getInfoBytes() == null) {
 				identity = generateIdentityV2(hour, venueInfo);
 			} else {
-				identity = generateIdentityV3(venueInfo.getInfoBytes(), hour);
+				identity = generateIdentityV3(venueInfo.getInfoBytes(), hour * 3600L);
 			}
 
 			byte[] message =
@@ -191,15 +191,16 @@ public class CryptoUtils {
 		return crypto_hash_sha256(concatenate(hash1, venueInfo.getNonce2(), String.valueOf(hour).getBytes()));
 	}
 
-	public byte[] generateIdentityV3(QrV3.QRCodePayload qrCodePayload, int hour) {
-		return generateIdentityV3(qrCodePayload.toByteArray(), hour);
+	public byte[] generateIdentityV3(QrV3.QRCodePayload qrCodePayload, long startOfInterval) {
+		return generateIdentityV3(qrCodePayload.toByteArray(), startOfInterval);
 	}
 
-	public byte[] generateIdentityV3(byte[] infoBytes, int hour) {
+	public byte[] generateIdentityV3(byte[] infoBytes, long startOfInterval) {
 		NoncesAndNotificationKey cryptoData = getNoncesAndNotificationKey(infoBytes);
 		byte[] preid = crypto_hash_sha256(concatenate("CN-PREID".getBytes(), infoBytes, cryptoData.nonce1));
 
-		return crypto_hash_sha256(concatenate("CN-ID".getBytes(), preid, intToBytes(3600), longToBytes(hour), cryptoData.nonce2));
+		return crypto_hash_sha256(
+				concatenate("CN-ID".getBytes(), preid, intToBytes(3600), longToBytes(startOfInterval), cryptoData.nonce2));
 	}
 
 	public NoncesAndNotificationKey getNoncesAndNotificationKey(QrV3.QRCodePayload qrCodePayload) {
