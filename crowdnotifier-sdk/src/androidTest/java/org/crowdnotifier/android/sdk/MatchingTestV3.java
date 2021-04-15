@@ -33,7 +33,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 /**
- * This class implements tests to validate the cryptographic operations in the app. To do so the test implements all cryptographic
+ * This class implements tests to validate the cryptographic operations in the app. To do so, the test implements all cryptographic
  * computations that are normally done in the Backend.
  */
 @RunWith(AndroidJUnit4.class)
@@ -48,6 +48,11 @@ public class MatchingTestV3 {
 	private static final int QR_CODE_VERSION = 3;
 
 
+	/**
+	 * Make some initializations before running the tests. (Load native mcl library, initialize singleton objects and create
+	 * a Health Authority Keypair, which is used to simulate the cryptographic actions of the Health Authority in the CrowdNotifier
+	 * protocol.
+	 */
 	@Before
 	public void init() {
 		context = InstrumentationRegistry.getInstrumentation().getTargetContext();
@@ -65,6 +70,13 @@ public class MatchingTestV3 {
 	}
 
 
+	/**
+	 * This tests a full cycle of the CrodNotifier protocol, from setting up the location owner, adding a User-Check-In to the SDK,
+	 * simulating the generation of a List of PreTrace Protobuf objects followed by the creation of the corresponding Trace
+	 * Protobuf objects as well as the ProblematicEventInfo objects, which are then successfully matched against the Check-In made
+	 * by the user, by calling the checkForMatches function of the SDK. After the successful match, the checkForMatches function
+	 * returns an ExposureEvent object.
+	 */
 	@Test
 	public void testMatching() throws QrUtils.QRException, InvalidProtocolBufferException {
 
@@ -91,6 +103,10 @@ public class MatchingTestV3 {
 		assertArrayEquals(countryData, exposureEvents.get(0).getCountryData());
 	}
 
+	/**
+	 * This test does exactly the same as the testMatching test, except it that the generated ProblematicEventInfo does not match
+	 * with the saved User-Check-In due to a time mismatch.
+	 */
 	@Test
 	public void testNoMatching() throws QrUtils.QRException, InvalidProtocolBufferException {
 
@@ -321,6 +337,10 @@ public class MatchingTestV3 {
 	}
 
 
+	/**
+	 * This class simulates the setup of a Location owner. It generates the two QR Code Protobufs for the public and the private
+	 * QR Codes (qrCodePayload and qrCodeTrace).
+	 */
 	private class Location {
 		ProtoV3.QRCodePayload qrCodePayload;
 		ProtoV3.QRCodeTrace qrCodeTrace;

@@ -18,6 +18,9 @@ import com.google.gson.reflect.TypeToken;
 import org.crowdnotifier.android.sdk.model.DayDate;
 import org.crowdnotifier.android.sdk.model.ExposureEvent;
 
+/**
+ * This class stores all ExposureEvents to EncryptedSharedPreferences.
+ */
 public class ExposureStorage {
 
 	private static final String KEY_CROWDNOTIFIER_STORE = "KEY_CROWDNOTIFIER_STORE";

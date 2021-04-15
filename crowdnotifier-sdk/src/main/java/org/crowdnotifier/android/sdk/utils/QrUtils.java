@@ -10,6 +10,11 @@ import org.crowdnotifier.android.sdk.model.VenueInfo;
 
 import static android.util.Base64.NO_PADDING;
 
+/**
+ * This class extracts the VenueInfo object from a provided QR Code URL in its only public function getQrInfo(...). It performs
+ * several checks wheter the provided QR Code Url is valid. (It checks if the format is correct, if the version is correct and if
+ * the current time is within the QR Code's validity time interval.
+ */
 public class QrUtils {
 
 	private static final String QR_CODE_VERSION_2 = "2";

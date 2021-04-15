@@ -15,6 +15,11 @@ import org.junit.runner.RunWith;
 
 import static org.junit.Assert.*;
 
+/**
+ * This class tests the implementations of some central building blocks of the CrowdNotifier Protocol, such as the Identity
+ * Generation and the derivation of Nonce1, Nonce2 and Notification Key using the HKDF function. It uses the test vector data
+ * from the crowd_notifier_test_vectors.json File.
+ */
 @RunWith(AndroidJUnit4.class)
 public class CryptoUnitTests {
 
@@ -32,6 +37,9 @@ public class CryptoUnitTests {
 	}
 
 
+	/**
+	 * Tests the Identity Generation method in the CryptoUtils class.
+	 */
 	@Test
 	public void testGenerateIdentity() {
 
@@ -42,6 +50,10 @@ public class CryptoUnitTests {
 		}
 	}
 
+	/**
+	 * Tests the CryptoUtils.getNoncesAndNotificationKey() function which derivates Nonce1, Nonce2 and Notification Key from a
+	 * given input byte array using the HKDF function.
+	 */
 	@Test
 	public void testHKDF() {
 

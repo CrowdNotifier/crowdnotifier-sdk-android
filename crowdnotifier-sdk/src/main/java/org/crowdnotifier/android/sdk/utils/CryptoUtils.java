@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,6 +27,10 @@ import org.crowdnotifier.android.sdk.model.*;
 import org.crowdnotifier.android.sdk.model.v2.ProtoV2;
 import org.crowdnotifier.android.sdk.model.v3.ProtoV3;
 
+/**
+ * This class contains all cryptographic calculations, such as encrypting VenueVisits or matching stored encrypted VenueVisits with
+ * ProblematicEventInfos.
+ */
 public class CryptoUtils {
 
 	private static final int HASH_BYTES = 32;
@@ -199,10 +204,10 @@ public class CryptoUtils {
 
 	public byte[] generateIdentityV3(byte[] infoBytes, long startOfInterval) {
 		NoncesAndNotificationKey cryptoData = getNoncesAndNotificationKey(infoBytes);
-		byte[] preid = crypto_hash_sha256(concatenate("CN-PREID".getBytes(), infoBytes, cryptoData.nonce1));
+		byte[] preid = crypto_hash_sha256(concatenate("CN-PREID".getBytes(StandardCharsets.US_ASCII), infoBytes, cryptoData.nonce1));
 
 		return crypto_hash_sha256(
-				concatenate("CN-ID".getBytes(), preid, intToBytes(3600), longToBytes(startOfInterval), cryptoData.nonce2));
+				concatenate("CN-ID".getBytes(StandardCharsets.US_ASCII), preid, intToBytes(3600), longToBytes(startOfInterval), cryptoData.nonce2));
 	}
 
 	public NoncesAndNotificationKey getNoncesAndNotificationKey(ProtoV3.QRCodePayload qrCodePayload) {
@@ -212,7 +217,7 @@ public class CryptoUtils {
 	public NoncesAndNotificationKey getNoncesAndNotificationKey(byte[] qrCodePayload) {
 		try {
 			byte[] hkdfOutput =
-					Hkdf.computeHkdf("HMACSHA256", qrCodePayload, new byte[0], "CrowdNotifier_v3".getBytes(), 96);
+					Hkdf.computeHkdf("HMACSHA256", qrCodePayload, new byte[0], "CrowdNotifier_v3".getBytes(StandardCharsets.US_ASCII), 96);
 			byte[] nonce1 = Arrays.copyOfRange(hkdfOutput, 0, 32);
 			byte[] nonce2 = Arrays.copyOfRange(hkdfOutput, 32, 64);
 			byte[] notificationKey = Arrays.copyOfRange(hkdfOutput, 64, 96);
