@@ -44,7 +44,7 @@ public class CryptoUnitTests {
 	public void testGenerateIdentity() {
 
 		for (TestVectors.IdentityTest identityTest : testVectors.identityTestVector) {
-			byte[] identity = cryptoUtils.generateIdentityV3(identityTest.infoBytes, identityTest.startOfInterval);
+			byte[] identity = cryptoUtils.generateIdentityV3(identityTest.qrCodePayload, identityTest.startOfInterval);
 			
 			assertArrayEquals(identityTest.identity, identity);
 		}
@@ -59,7 +59,7 @@ public class CryptoUnitTests {
 
 		for (TestVectors.HKDFTest hkdfTest : testVectors.hkdfTestVector) {
 			CryptoUtils.NoncesAndNotificationKey noncesAndNotificationKey =
-					cryptoUtils.getNoncesAndNotificationKey(hkdfTest.infoBytes);
+					cryptoUtils.getNoncesAndNotificationKey(hkdfTest.qrCodePayload);
 
 			assertArrayEquals(hkdfTest.nonce1, noncesAndNotificationKey.nonce1);
 			assertArrayEquals(hkdfTest.nonce2, noncesAndNotificationKey.nonce2);

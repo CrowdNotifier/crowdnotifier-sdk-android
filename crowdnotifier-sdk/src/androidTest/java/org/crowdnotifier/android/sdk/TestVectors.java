@@ -8,7 +8,7 @@ public class TestVectors {
 
 
 	public static class HKDFTest {
-		public byte[] infoBytes;
+		public byte[] qrCodePayload;
 		public byte[] nonce1;
 		public byte[] nonce2;
 		public byte[] notificationKey;
@@ -17,7 +17,7 @@ public class TestVectors {
 
 
 	public static class IdentityTest {
-		public byte[] infoBytes;
+		public byte[] qrCodePayload;
 		public int startOfInterval;
 		public byte[] identity;
 
