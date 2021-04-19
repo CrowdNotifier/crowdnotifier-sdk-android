@@ -7,16 +7,16 @@ public class ProblematicEventInfo {
 	private long startTimestamp;
 	private long endTimestamp;
 	byte[] encryptedAssociatedData;
-	byte[] nonce;
+	byte[] cipherTextNonce;
 
 	public ProblematicEventInfo(byte[] identity, byte[] secretKeyForIdentity, long startTimestamp, long endTimestamp,
-			byte[] encryptedAssociatedData, byte[] nonce) {
+			byte[] encryptedAssociatedData, byte[] cipherTextNonce) {
 		this.identity = identity;
 		this.secretKeyForIdentity = secretKeyForIdentity;
 		this.startTimestamp = startTimestamp;
 		this.endTimestamp = endTimestamp;
 		this.encryptedAssociatedData = encryptedAssociatedData;
-		this.nonce = nonce;
+		this.cipherTextNonce = cipherTextNonce;
 	}
 
 	public byte[] getIdentity() {
@@ -39,8 +39,8 @@ public class ProblematicEventInfo {
 		return encryptedAssociatedData;
 	}
 
-	public byte[] getNonce() {
-		return nonce;
+	public byte[] getCipherTextNonce() {
+		return cipherTextNonce;
 	}
 
 }

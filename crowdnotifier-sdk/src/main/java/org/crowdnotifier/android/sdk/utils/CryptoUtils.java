@@ -58,7 +58,6 @@ public class CryptoUtils {
 		G2 masterPublicKey = new G2();
 		masterPublicKey.deserialize(venueInfo.getPublicKey());
 
-		//scan
 		ArrayList<IBECiphertext> ibeCiphertextsEntries = new ArrayList<>();
 
 		ArrayList<Integer> hourCounters = getAffectedHours(arrivalTime, departureTime);
@@ -68,6 +67,8 @@ public class CryptoUtils {
 			if (venueInfo.getQrCodePayload() == null) {
 				identity = generateIdentityV2(hour, venueInfo);
 			} else {
+				// getAffectedhours() generates hours since UNIX epoch. As the new format requires these to be in seconds since
+				// UNIX epoch, we multiply by 60 minutes * 60 seconds = 3600.
 				identity = generateIdentityV3(venueInfo.getQrCodePayload(), hour * 3600L);
 			}
 
@@ -101,7 +102,7 @@ public class CryptoUtils {
 
 				byte[] decryptedMessage =
 						crypto_secretbox_open_easy(payload.getNotificationKey(), eventInfo.getEncryptedAssociatedData(),
-								eventInfo.getNonce());
+								eventInfo.getCipherTextNonce());
 
 				String decryptedMessageString;
 				byte[] countryData = null;
@@ -204,10 +205,12 @@ public class CryptoUtils {
 
 	public byte[] generateIdentityV3(byte[] qrCodePayload, long startOfInterval) {
 		NoncesAndNotificationKey cryptoData = getNoncesAndNotificationKey(qrCodePayload);
-		byte[] preid = crypto_hash_sha256(concatenate("CN-PREID".getBytes(StandardCharsets.US_ASCII), qrCodePayload, cryptoData.nonce1));
+		byte[] preid =
+				crypto_hash_sha256(concatenate("CN-PREID".getBytes(StandardCharsets.US_ASCII), qrCodePayload, cryptoData.nonce1));
 
 		return crypto_hash_sha256(
-				concatenate("CN-ID".getBytes(StandardCharsets.US_ASCII), preid, intToBytes(3600), longToBytes(startOfInterval), cryptoData.nonce2));
+				concatenate("CN-ID".getBytes(StandardCharsets.US_ASCII), preid, intToBytes(3600), longToBytes(startOfInterval),
+						cryptoData.nonce2));
 	}
 
 	public NoncesAndNotificationKey getNoncesAndNotificationKey(ProtoV3.QRCodePayload qrCodePayload) {
@@ -217,7 +220,8 @@ public class CryptoUtils {
 	public NoncesAndNotificationKey getNoncesAndNotificationKey(byte[] qrCodePayload) {
 		try {
 			byte[] hkdfOutput =
-					Hkdf.computeHkdf("HMACSHA256", qrCodePayload, new byte[0], "CrowdNotifier_v3".getBytes(StandardCharsets.US_ASCII), 96);
+					Hkdf.computeHkdf("HMACSHA256", qrCodePayload, new byte[0],
+							"CrowdNotifier_v3".getBytes(StandardCharsets.US_ASCII), 96);
 			byte[] nonce1 = Arrays.copyOfRange(hkdfOutput, 0, 32);
 			byte[] nonce2 = Arrays.copyOfRange(hkdfOutput, 32, 64);
 			byte[] notificationKey = Arrays.copyOfRange(hkdfOutput, 64, 96);
@@ -277,6 +281,10 @@ public class CryptoUtils {
 		return out;
 	}
 
+	/**
+	 * @return a List of Integers containing all hours since UNIX epoch that intersect with the (arrivalTime, departureTime)
+	 * interval.
+	 */
 	public ArrayList<Integer> getAffectedHours(long arrivalTime, long departureTime) {
 		long ONE_HOUR_IN_MILLISECONDS = 1000L * 60 * 60;
 		long startHour = arrivalTime / ONE_HOUR_IN_MILLISECONDS;

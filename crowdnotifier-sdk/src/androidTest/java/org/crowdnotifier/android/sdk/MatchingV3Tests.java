@@ -37,7 +37,7 @@ import static org.junit.Assert.assertEquals;
  * computations that are normally done in the Backend.
  */
 @RunWith(AndroidJUnit4.class)
-public class MatchingTestV3 {
+public class MatchingV3Tests {
 
 	private Context context;
 	private SodiumAndroid sodium;
