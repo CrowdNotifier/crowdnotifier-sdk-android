@@ -1,66 +1,46 @@
 package org.crowdnotifier.android.sdk.model;
 
 public class VenueInfo {
-	private String name;
-	private String location;
-	private String room;
+	private String description;
+	private String address;
 	private byte[] notificationKey;
-	private Qr.QRCodeContent.VenueType venueType;
-	private byte[] masterPublicKey;
+	private byte[] publicKey;
 	private byte[] nonce1;
 	private byte[] nonce2;
-	long validFrom;
-	long validTo;
+	private long validFrom;
+	private long validTo;
+	private byte[] qrCodePayload; // if null -> old CrowdNotifier QR Code Version (2)
+	private byte[] countryData;
 
-	public VenueInfo(String name, String location, String room, byte[] notificationKey, Qr.QRCodeContent.VenueType venueType,
-			byte[] masterPublicKey, byte[] nonce1, byte[] nonce2, long validFrom, long validTo) {
-		this.name = name;
-		this.location = location;
-		this.room = room;
+	public VenueInfo(String description, String address, byte[] notificationKey, byte[] publicKey, byte[] nonce1,
+			byte[] nonce2, long validFrom, long validTo, byte[] qrCodePayload, byte[] countryData) {
+		this.description = description;
+		this.address = address;
 		this.notificationKey = notificationKey;
-		this.venueType = venueType;
-		this.masterPublicKey = masterPublicKey;
+		this.publicKey = publicKey;
 		this.nonce1 = nonce1;
 		this.nonce2 = nonce2;
 		this.validFrom = validFrom;
 		this.validTo = validTo;
+		this.qrCodePayload = qrCodePayload;
+		this.countryData = countryData;
 	}
 
 
-	public String getName() {
-		return name;
+	public String getDescription() {
+		return description;
 	}
 
-	public String getLocation() {
-		return location;
+	public String getAddress() {
+		return address;
 	}
 
 	public byte[] getNotificationKey() {
 		return notificationKey;
 	}
 
-	public String getRoom() {
-		return room;
-	}
-
-	public Qr.QRCodeContent.VenueType getVenueType() {
-		return venueType;
-	}
-
 	public String getTitle() {
-		return name;
-	}
-
-	public String getSubtitle() {
-		if (room == null || room.equals("")) {
-			return location;
-		} else {
-			return location + ", " + room;
-		}
-	}
-
-	public byte[] getMasterPublicKey() {
-		return masterPublicKey;
+		return description;
 	}
 
 	public byte[] getNonce1() {
@@ -77,6 +57,18 @@ public class VenueInfo {
 
 	public long getValidTo() {
 		return validTo;
+	}
+
+	public byte[] getQrCodePayload() {
+		return qrCodePayload;
+	}
+
+	public byte[] getPublicKey() {
+		return publicKey;
+	}
+
+	public byte[] getCountryData() {
+		return countryData;
 	}
 
 }
