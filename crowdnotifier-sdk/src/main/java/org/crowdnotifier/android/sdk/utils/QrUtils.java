@@ -1,14 +1,11 @@
 package org.crowdnotifier.android.sdk.utils;
 
-import android.util.Base64;
-
 import com.google.protobuf.InvalidProtocolBufferException;
 
+import org.crowdnotifier.android.sdk.CrowdNotifier;
 import org.crowdnotifier.android.sdk.model.v2.ProtoV2;
 import org.crowdnotifier.android.sdk.model.v3.ProtoV3;
 import org.crowdnotifier.android.sdk.model.VenueInfo;
-
-import static android.util.Base64.NO_PADDING;
 
 /**
  * This class extracts the VenueInfo object from a provided QR Code URL in its only public function getQrInfo(...). It performs
@@ -17,8 +14,8 @@ import static android.util.Base64.NO_PADDING;
  */
 public class QrUtils {
 
-	private static final String QR_CODE_VERSION_2 = "2";
-	private static final String QR_CODE_VERSION_3 = "3";
+	private static final int QR_CODE_VERSION_2 = 2;
+	public static final int QR_CODE_VERSION_3 = 3;
 
 	public static VenueInfo getQrInfo(String qrCodeString, String expectedQrCodePrefix) throws QRException {
 
@@ -30,9 +27,9 @@ public class QrUtils {
 		String version = urlSplits[1];
 		if (!urlPrefix.equals(expectedQrCodePrefix)) throw new InvalidQRCodeFormatException();
 
-		if (QR_CODE_VERSION_2.equals(version)) {
+		if (String.valueOf(QR_CODE_VERSION_2).equals(version)) {
 			return getVenueInfoFromQrCodeV2(fragmentSplit[1]);
-		} else if (QR_CODE_VERSION_3.equals(version)) {
+		} else if (String.valueOf(QR_CODE_VERSION_3).equals(version)) {
 			return getVenueInfoFromQrCodeV3(fragmentSplit[1]);
 		} else {
 			throw new InvalidQRCodeVersionException();
@@ -41,8 +38,7 @@ public class QrUtils {
 
 	private static VenueInfo getVenueInfoFromQrCodeV3(String qrCodeString) throws QRException {
 		try {
-			int decodeFlags = Base64.NO_WRAP | Base64.URL_SAFE | NO_PADDING;
-			byte[] decoded = Base64.decode(qrCodeString, decodeFlags);
+			byte[] decoded = Base64Util.fromBase64(qrCodeString);
 			ProtoV3.QRCodePayload qrCodeEntry = ProtoV3.QRCodePayload.parseFrom(decoded);
 			ProtoV3.TraceLocation locationData = qrCodeEntry.getLocationData();
 			ProtoV3.CrowdNotifierData crowdNotifierData = qrCodeEntry.getCrowdNotifierData();
@@ -67,8 +63,8 @@ public class QrUtils {
 
 	private static VenueInfo getVenueInfoFromQrCodeV2(String qrCodeString) throws QRException {
 		try {
-			int decodeFlags = Base64.NO_WRAP | Base64.URL_SAFE | NO_PADDING;
-			byte[] decoded = Base64.decode(qrCodeString, decodeFlags);
+
+			byte[] decoded = Base64Util.fromBase64(qrCodeString);
 			ProtoV2.QRCodeEntry qrCodeEntry = ProtoV2.QRCodeEntry.parseFrom(decoded);
 			ProtoV2.QRCodeContent qrCode = qrCodeEntry.getData();
 

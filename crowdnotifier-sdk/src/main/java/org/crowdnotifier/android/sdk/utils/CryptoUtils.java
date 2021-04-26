@@ -27,6 +27,8 @@ import org.crowdnotifier.android.sdk.model.*;
 import org.crowdnotifier.android.sdk.model.v2.ProtoV2;
 import org.crowdnotifier.android.sdk.model.v3.ProtoV3;
 
+import static org.crowdnotifier.android.sdk.utils.QrUtils.QR_CODE_VERSION_3;
+
 /**
  * This class contains all cryptographic calculations, such as encrypting VenueVisits or matching stored encrypted VenueVisits with
  * ProblematicEventInfos.
@@ -35,6 +37,7 @@ public class CryptoUtils {
 
 	private static final int HASH_BYTES = 32;
 	private static final int NONCE_BYTES = 32;
+	private static final int CRYPTOGRAPHIC_SEED_BYTES = 32;
 
 
 	private static CryptoUtils instance;
@@ -162,7 +165,7 @@ public class CryptoUtils {
 
 	public IBECiphertext encryptInternal(G2 masterPublicKey, byte[] identity, byte[] message) {
 
-		byte[] x = randombytes_buf();
+		byte[] x = getRandomValue(NONCE_BYTES);
 
 		Fr r = new Fr();
 		r.setHashOf(concatenate(x, identity, message));
@@ -182,7 +185,7 @@ public class CryptoUtils {
 		byte[] c2_pair = crypto_hash_sha256(gt_temp.serialize());
 		byte[] c2 = xor(x, c2_pair);
 
-		byte[] nonce = randombytes_buf();
+		byte[] nonce = getRandomValue(NONCE_BYTES);
 
 		byte[] c3 = crypto_secretbox_easy(crypto_hash_sha256(x), message, nonce);
 
@@ -219,6 +222,18 @@ public class CryptoUtils {
 				int32ToBytesBigEndian(intervalLength), int64ToBytesBigEndian(startOfInterval), timeKey));
 	}
 
+	public ArrayList<byte[]> generateIdentitiesV3(VenueInfo venueInfo, long startTimestamp, long endTimestamp) {
+		ArrayList<Integer> hourCounters = getAffectedHours(startTimestamp, endTimestamp);
+		ArrayList<byte[]> identities = new ArrayList<>();
+		for (Integer hour : hourCounters) {
+			// getAffectedhours() generates hours since UNIX epoch. As the new format requires these to be in seconds since
+			// UNIX epoch, we multiply by 60 minutes * 60 seconds = 3600.
+			byte[] identity = generateIdentityV3(venueInfo.getQrCodePayload(), hour * 3600L);
+			identities.add(identity);
+		}
+		return identities;
+	}
+
 	public NoncesAndNotificationKey getNoncesAndNotificationKey(ProtoV3.QRCodePayload qrCodePayload) {
 		return getNoncesAndNotificationKey(qrCodePayload.toByteArray());
 	}
@@ -234,6 +249,36 @@ public class CryptoUtils {
 		} catch (GeneralSecurityException e) {
 			throw new RuntimeException("HKDF threw GeneralSecurityException");
 		}
+	}
+
+	/**
+	 * Generates Base64 encoded String of an Entry QR Code
+	 */
+	public String generateEntryQrCode(String description, String address, byte[] countryData, long validFrom, long validTo,
+			byte[] masterPublicKey) {
+
+		ProtoV3.TraceLocation traceLocation = ProtoV3.TraceLocation.newBuilder()
+				.setVersion(QR_CODE_VERSION_3)
+				.setStartTimestamp(validFrom)
+				.setEndTimestamp(validTo)
+				.setDescription(description)
+				.setAddress(address)
+				.build();
+
+		ProtoV3.CrowdNotifierData crowdNotifierData = ProtoV3.CrowdNotifierData.newBuilder()
+				.setVersion(QR_CODE_VERSION_3)
+				.setCryptographicSeed(ByteString.copyFrom(getRandomValue(CRYPTOGRAPHIC_SEED_BYTES)))
+				.setPublicKey(ByteString.copyFrom(masterPublicKey))
+				.build();
+
+		ProtoV3.QRCodePayload qrCodePayload = ProtoV3.QRCodePayload.newBuilder()
+				.setVersion(QR_CODE_VERSION_3)
+				.setCrowdNotifierData(crowdNotifierData)
+				.setLocationData(traceLocation)
+				.setCountryData(ByteString.copyFrom(countryData))
+				.build();
+
+		return Base64Util.toBase64(qrCodePayload.toByteArray());
 	}
 
 	private byte[] int64ToBytesBigEndian(long l) {
@@ -273,9 +318,9 @@ public class CryptoUtils {
 		return c;
 	}
 
-	private byte[] randombytes_buf() {
-		byte[] nonce = new byte[NONCE_BYTES];
-		sodium.randombytes_buf(nonce, NONCE_BYTES);
+	public byte[] getRandomValue(int bytes) {
+		byte[] nonce = new byte[bytes];
+		sodium.randombytes_buf(nonce, nonce.length);
 		return nonce;
 	}
 
