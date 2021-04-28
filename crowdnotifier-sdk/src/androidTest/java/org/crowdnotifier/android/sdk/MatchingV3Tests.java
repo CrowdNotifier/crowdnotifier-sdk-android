@@ -71,7 +71,7 @@ public class MatchingV3Tests {
 
 
 	/**
-	 * This tests a full cycle of the CrodNotifier protocol, from setting up the location owner, adding a User-Check-In to the SDK,
+	 * This tests a full cycle of the CrowdNotifier protocol, from setting up the location owner, adding a User-Check-In to the SDK,
 	 * simulating the generation of a List of PreTrace Protobuf objects followed by the creation of the corresponding Trace
 	 * Protobuf objects as well as the ProblematicEventInfo objects, which are then successfully matched against the Check-In made
 	 * by the user, by calling the checkForMatches function of the SDK. After the successful match, the checkForMatches function
