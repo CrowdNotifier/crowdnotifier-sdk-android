@@ -205,12 +205,16 @@ public class CryptoUtils {
 
 	public byte[] generateIdentityV3(byte[] qrCodePayload, long startOfInterval) {
 		NoncesAndNotificationKey cryptoData = getNoncesAndNotificationKey(qrCodePayload);
-		byte[] preid =
-				crypto_hash_sha256(concatenate("CN-PREID".getBytes(StandardCharsets.US_ASCII), qrCodePayload, cryptoData.nonce1));
+		int intervalLenght = 3600; // 1 hour
 
-		return crypto_hash_sha256(
-				concatenate("CN-ID".getBytes(StandardCharsets.US_ASCII), preid, intToBytes(3600), longToBytes(startOfInterval),
-						cryptoData.nonce2));
+		byte[] preid = crypto_hash_sha256(
+				concatenate("CN-PREID".getBytes(StandardCharsets.US_ASCII), qrCodePayload, cryptoData.noncePreId));
+
+		byte[] timeKey = crypto_hash_sha256(concatenate("CN-TIMEKEY".getBytes(StandardCharsets.US_ASCII),
+				intToBytes(intervalLenght), longToBytes(startOfInterval), cryptoData.nonceTimekey));
+
+		return crypto_hash_sha256(concatenate("CN-ID".getBytes(StandardCharsets.US_ASCII), preid, intToBytes(intervalLenght),
+				longToBytes(startOfInterval), timeKey));
 	}
 
 	public NoncesAndNotificationKey getNoncesAndNotificationKey(ProtoV3.QRCodePayload qrCodePayload) {
@@ -219,9 +223,8 @@ public class CryptoUtils {
 
 	public NoncesAndNotificationKey getNoncesAndNotificationKey(byte[] qrCodePayload) {
 		try {
-			byte[] hkdfOutput =
-					Hkdf.computeHkdf("HMACSHA256", qrCodePayload, new byte[0],
-							"CrowdNotifier_v3".getBytes(StandardCharsets.US_ASCII), 96);
+			byte[] hkdfOutput = Hkdf.computeHkdf("HMACSHA256", qrCodePayload, new byte[0],
+					"CrowdNotifier_v3".getBytes(StandardCharsets.US_ASCII), 96);
 			byte[] nonce1 = Arrays.copyOfRange(hkdfOutput, 0, 32);
 			byte[] nonce2 = Arrays.copyOfRange(hkdfOutput, 32, 64);
 			byte[] notificationKey = Arrays.copyOfRange(hkdfOutput, 64, 96);
@@ -343,13 +346,13 @@ public class CryptoUtils {
 	}
 
 	public class NoncesAndNotificationKey {
-		public final byte[] nonce1;
-		public final byte[] nonce2;
+		public final byte[] noncePreId;
+		public final byte[] nonceTimekey;
 		public final byte[] notificationKey;
 
-		public NoncesAndNotificationKey(byte[] nonce1, byte[] nonce2, byte[] notificationKey) {
-			this.nonce1 = nonce1;
-			this.nonce2 = nonce2;
+		public NoncesAndNotificationKey(byte[] noncePreId, byte[] nonceTimekey, byte[] notificationKey) {
+			this.noncePreId = noncePreId;
+			this.nonceTimekey = nonceTimekey;
 			this.notificationKey = notificationKey;
 		}
 

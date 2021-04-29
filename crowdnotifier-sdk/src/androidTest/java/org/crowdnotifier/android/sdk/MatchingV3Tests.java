@@ -252,8 +252,8 @@ public class MatchingV3Tests {
 
 			ProtoV3.TraceProof traceProof = ProtoV3.TraceProof.newBuilder()
 					.setMasterPublicKey(qrCodePayload.getCrowdNotifierData().getPublicKey())
-					.setNonce1(ByteString.copyFrom(cryptoData.nonce1))
-					.setNonce2(ByteString.copyFrom(cryptoData.nonce2))
+					.setNoncePreId(ByteString.copyFrom(cryptoData.noncePreId))
+					.setNonceTimekey(ByteString.copyFrom(cryptoData.nonceTimekey))
 					.build();
 
 			ProtoV3.PreTraceWithProof preTraceWithProof = ProtoV3.PreTraceWithProof.newBuilder()

@@ -61,8 +61,8 @@ public class CryptoUnitTests {
 			CryptoUtils.NoncesAndNotificationKey noncesAndNotificationKey =
 					cryptoUtils.getNoncesAndNotificationKey(hkdfTest.qrCodePayload);
 
-			assertArrayEquals(hkdfTest.nonce1, noncesAndNotificationKey.nonce1);
-			assertArrayEquals(hkdfTest.nonce2, noncesAndNotificationKey.nonce2);
+			assertArrayEquals(hkdfTest.noncePreId, noncesAndNotificationKey.noncePreId);
+			assertArrayEquals(hkdfTest.nonceTimekey, noncesAndNotificationKey.nonceTimekey);
 			assertArrayEquals(hkdfTest.notificationKey, noncesAndNotificationKey.notificationKey);
 		}
 	}
