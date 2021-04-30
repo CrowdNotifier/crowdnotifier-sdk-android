@@ -9,8 +9,8 @@ public class TestVectors {
 
 	public static class HKDFTest {
 		public byte[] qrCodePayload;
-		public byte[] nonce1;
-		public byte[] nonce2;
+		public byte[] noncePreId;
+		public byte[] nonceTimekey;
 		public byte[] notificationKey;
 
 	}

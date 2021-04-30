@@ -69,7 +69,7 @@ public class CryptoUtils {
 			} else {
 				// getAffectedhours() generates hours since UNIX epoch. As the new format requires these to be in seconds since
 				// UNIX epoch, we multiply by 60 minutes * 60 seconds = 3600.
-				identity = generateIdentityV3(venueInfo.getQrCodePayload(), hour * 3600L);
+				identity = generateIdentityV3(venueInfo.getQrCodePayload(), hour * 3600L, 3600);
 			}
 
 			byte[] message =
@@ -195,22 +195,28 @@ public class CryptoUtils {
 	}
 
 	public byte[] generateIdentityV2(int hour, VenueInfo venueInfo) {
-		byte[] hash1 = crypto_hash_sha256(concatenate(venueInfoToInfoBytes(venueInfo), venueInfo.getNonce1()));
-		return crypto_hash_sha256(concatenate(hash1, venueInfo.getNonce2(), String.valueOf(hour).getBytes()));
+		byte[] hash1 = crypto_hash_sha256(concatenate(venueInfoToInfoBytes(venueInfo), venueInfo.getNoncePreId()));
+		return crypto_hash_sha256(concatenate(hash1, venueInfo.getNonceTimekey(), String.valueOf(hour).getBytes()));
 	}
 
-	public byte[] generateIdentityV3(ProtoV3.QRCodePayload qrCodePayload, long startOfInterval) {
-		return generateIdentityV3(qrCodePayload.toByteArray(), startOfInterval);
+	public byte[] generateIdentityV3(ProtoV3.QRCodePayload qrCodePayload, long startOfInterval, int intervalLength) {
+		return generateIdentityV3(qrCodePayload.toByteArray(), startOfInterval, intervalLength);
 	}
 
-	public byte[] generateIdentityV3(byte[] qrCodePayload, long startOfInterval) {
+	public byte[] generateIdentityV3(byte[] qrCodePayload, long startOfInterval, int intervalLength) {
+		if (intervalLength < 900 || intervalLength > 86400) {
+			throw new RuntimeException("intervalLength must be between 900 and 86400");
+		}
 		NoncesAndNotificationKey cryptoData = getNoncesAndNotificationKey(qrCodePayload);
-		byte[] preid =
-				crypto_hash_sha256(concatenate("CN-PREID".getBytes(StandardCharsets.US_ASCII), qrCodePayload, cryptoData.nonce1));
 
-		return crypto_hash_sha256(
-				concatenate("CN-ID".getBytes(StandardCharsets.US_ASCII), preid, intToBytes(3600), longToBytes(startOfInterval),
-						cryptoData.nonce2));
+		byte[] preid = crypto_hash_sha256(
+				concatenate("CN-PREID".getBytes(StandardCharsets.US_ASCII), qrCodePayload, cryptoData.noncePreId));
+
+		byte[] timeKey = crypto_hash_sha256(concatenate("CN-TIMEKEY".getBytes(StandardCharsets.US_ASCII),
+				int32ToBytesBigEndian(intervalLength), int64ToBytesBigEndian(startOfInterval), cryptoData.nonceTimekey));
+
+		return crypto_hash_sha256(concatenate("CN-ID".getBytes(StandardCharsets.US_ASCII), preid,
+				int32ToBytesBigEndian(intervalLength), int64ToBytesBigEndian(startOfInterval), timeKey));
 	}
 
 	public NoncesAndNotificationKey getNoncesAndNotificationKey(ProtoV3.QRCodePayload qrCodePayload) {
@@ -219,26 +225,25 @@ public class CryptoUtils {
 
 	public NoncesAndNotificationKey getNoncesAndNotificationKey(byte[] qrCodePayload) {
 		try {
-			byte[] hkdfOutput =
-					Hkdf.computeHkdf("HMACSHA256", qrCodePayload, new byte[0],
-							"CrowdNotifier_v3".getBytes(StandardCharsets.US_ASCII), 96);
-			byte[] nonce1 = Arrays.copyOfRange(hkdfOutput, 0, 32);
-			byte[] nonce2 = Arrays.copyOfRange(hkdfOutput, 32, 64);
+			byte[] hkdfOutput = Hkdf.computeHkdf("HMACSHA256", qrCodePayload, new byte[0],
+					"CrowdNotifier_v3".getBytes(StandardCharsets.US_ASCII), 96);
+			byte[] noncePreId = Arrays.copyOfRange(hkdfOutput, 0, 32);
+			byte[] nonceTimekey = Arrays.copyOfRange(hkdfOutput, 32, 64);
 			byte[] notificationKey = Arrays.copyOfRange(hkdfOutput, 64, 96);
-			return new NoncesAndNotificationKey(nonce1, nonce2, notificationKey);
+			return new NoncesAndNotificationKey(noncePreId, nonceTimekey, notificationKey);
 		} catch (GeneralSecurityException e) {
 			throw new RuntimeException("HKDF threw GeneralSecurityException");
 		}
 	}
 
-	private byte[] longToBytes(long l) {
+	private byte[] int64ToBytesBigEndian(long l) {
 		ByteBuffer byteBuffer = ByteBuffer.allocate(8);
 		byteBuffer.order(ByteOrder.BIG_ENDIAN);
 		byteBuffer.putLong(l);
 		return byteBuffer.array();
 	}
 
-	private byte[] intToBytes(int i) {
+	private byte[] int32ToBytesBigEndian(int i) {
 		ByteBuffer byteBuffer = ByteBuffer.allocate(4);
 		byteBuffer.order(ByteOrder.BIG_ENDIAN);
 		byteBuffer.putInt(i);
@@ -343,13 +348,13 @@ public class CryptoUtils {
 	}
 
 	public class NoncesAndNotificationKey {
-		public final byte[] nonce1;
-		public final byte[] nonce2;
+		public final byte[] noncePreId;
+		public final byte[] nonceTimekey;
 		public final byte[] notificationKey;
 
-		public NoncesAndNotificationKey(byte[] nonce1, byte[] nonce2, byte[] notificationKey) {
-			this.nonce1 = nonce1;
-			this.nonce2 = nonce2;
+		public NoncesAndNotificationKey(byte[] noncePreId, byte[] nonceTimekey, byte[] notificationKey) {
+			this.noncePreId = noncePreId;
+			this.nonceTimekey = nonceTimekey;
 			this.notificationKey = notificationKey;
 		}
 

@@ -57,7 +57,7 @@ public class QrUtils {
 			CryptoUtils.NoncesAndNotificationKey cryptoData = CryptoUtils.getInstance().getNoncesAndNotificationKey(qrCodeEntry);
 
 			return new VenueInfo(locationData.getDescription(), locationData.getAddress(), cryptoData.notificationKey,
-					crowdNotifierData.getPublicKey().toByteArray(), cryptoData.nonce1, cryptoData.nonce2,
+					crowdNotifierData.getPublicKey().toByteArray(), cryptoData.noncePreId, cryptoData.nonceTimekey,
 					locationData.getStartTimestamp(), locationData.getEndTimestamp(), qrCodeEntry.toByteArray(),
 					qrCodeEntry.getCountryData().toByteArray());
 		} catch (InvalidProtocolBufferException e) {

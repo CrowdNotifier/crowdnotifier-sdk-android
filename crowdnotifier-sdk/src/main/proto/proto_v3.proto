@@ -17,8 +17,8 @@ message PreTrace {
 
 message TraceProof {
   bytes masterPublicKey = 1;
-  bytes nonce1 = 2;
-  bytes nonce2 = 3;
+  bytes noncePreId = 2;
+  bytes nonceTimekey = 3;
 }
 
 message PreTraceWithProof {

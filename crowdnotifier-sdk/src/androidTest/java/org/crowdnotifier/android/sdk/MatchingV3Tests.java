@@ -191,7 +191,7 @@ public class MatchingV3Tests {
 		Mcl.add(secretKeyForIdentity, partialSecretKeyForIdentityOfLocation, partialSecretKeyForIdentityOfHealthAuthority);
 
 		ProtoV3.QRCodePayload qrCodePayload = ProtoV3.QRCodePayload.parseFrom(preTraceWithProof.getQrCodePayload());
-		byte[] identity = cryptoUtils.generateIdentityV3(qrCodePayload, preTraceWithProof.getStartOfInterval());
+		byte[] identity = cryptoUtils.generateIdentityV3(qrCodePayload, preTraceWithProof.getStartOfInterval(), 3600);
 		if (!Arrays.equals(preTrace.getIdentity().toByteArray(), identity)) {
 			return null;
 		}
@@ -238,7 +238,7 @@ public class MatchingV3Tests {
 
 			long startOfInterval = hour * 3600;
 
-			byte[] identity = cryptoUtils.generateIdentityV3(qrCodePayload, startOfInterval);
+			byte[] identity = cryptoUtils.generateIdentityV3(qrCodePayload, startOfInterval, 3600);
 
 			G1 partialSecretKeyForIdentityOfLocation = keyDer(masterSecretKeyLocation, identity);
 
@@ -252,8 +252,8 @@ public class MatchingV3Tests {
 
 			ProtoV3.TraceProof traceProof = ProtoV3.TraceProof.newBuilder()
 					.setMasterPublicKey(qrCodePayload.getCrowdNotifierData().getPublicKey())
-					.setNonce1(ByteString.copyFrom(cryptoData.nonce1))
-					.setNonce2(ByteString.copyFrom(cryptoData.nonce2))
+					.setNoncePreId(ByteString.copyFrom(cryptoData.noncePreId))
+					.setNonceTimekey(ByteString.copyFrom(cryptoData.nonceTimekey))
 					.build();
 
 			ProtoV3.PreTraceWithProof preTraceWithProof = ProtoV3.PreTraceWithProof.newBuilder()
