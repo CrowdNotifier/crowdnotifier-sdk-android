@@ -2,8 +2,6 @@ package org.crowdnotifier.android.sdk.utils;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import org.crowdnotifier.android.sdk.CrowdNotifier;
-import org.crowdnotifier.android.sdk.model.v2.ProtoV2;
 import org.crowdnotifier.android.sdk.model.v3.ProtoV3;
 import org.crowdnotifier.android.sdk.model.VenueInfo;
 
@@ -14,7 +12,6 @@ import org.crowdnotifier.android.sdk.model.VenueInfo;
  */
 public class QrUtils {
 
-	private static final int QR_CODE_VERSION_2 = 2;
 	public static final int QR_CODE_VERSION_3 = 3;
 
 	public static VenueInfo getQrInfo(String qrCodeString, String expectedQrCodePrefix) throws QRException {
@@ -27,16 +24,14 @@ public class QrUtils {
 		String version = urlSplits[1];
 		if (!urlPrefix.equals(expectedQrCodePrefix)) throw new InvalidQRCodeFormatException();
 
-		if (String.valueOf(QR_CODE_VERSION_2).equals(version)) {
-			return getVenueInfoFromQrCodeV2(fragmentSplit[1]);
-		} else if (String.valueOf(QR_CODE_VERSION_3).equals(version)) {
-			return getVenueInfoFromQrCodeV3(fragmentSplit[1]);
+		if (String.valueOf(QR_CODE_VERSION_3).equals(version)) {
+			return getVenueInfoFromQrCode(fragmentSplit[1]);
 		} else {
 			throw new InvalidQRCodeVersionException();
 		}
 	}
 
-	private static VenueInfo getVenueInfoFromQrCodeV3(String qrCodeString) throws QRException {
+	private static VenueInfo getVenueInfoFromQrCode(String qrCodeString) throws QRException {
 		try {
 			byte[] decoded = Base64Util.fromBase64(qrCodeString);
 			ProtoV3.QRCodePayload qrCodeEntry = ProtoV3.QRCodePayload.parseFrom(decoded);
@@ -56,35 +51,6 @@ public class QrUtils {
 					crowdNotifierData.getPublicKey().toByteArray(), cryptoData.noncePreId, cryptoData.nonceTimekey,
 					locationData.getStartTimestamp(), locationData.getEndTimestamp(), qrCodeEntry.toByteArray(),
 					qrCodeEntry.getCountryData().toByteArray());
-		} catch (InvalidProtocolBufferException e) {
-			throw new InvalidQRCodeFormatException();
-		}
-	}
-
-	private static VenueInfo getVenueInfoFromQrCodeV2(String qrCodeString) throws QRException {
-		try {
-
-			byte[] decoded = Base64Util.fromBase64(qrCodeString);
-			ProtoV2.QRCodeEntry qrCodeEntry = ProtoV2.QRCodeEntry.parseFrom(decoded);
-			ProtoV2.QRCodeContent qrCode = qrCodeEntry.getData();
-
-			if (System.currentTimeMillis() < qrCode.getValidFrom()) {
-				throw new NotYetValidException();
-			}
-			if (System.currentTimeMillis() > qrCode.getValidTo()) {
-				throw new NotValidAnymoreException();
-			}
-
-			ProtoV3.NotifyMeLocationData notifyMeLocationData = ProtoV3.NotifyMeLocationData.newBuilder()
-					.setRoom(qrCode.getRoom())
-					.setVersion(2)
-					.setTypeValue(qrCode.getVenueTypeValue())
-					.build();
-
-			return new VenueInfo(qrCode.getName(), qrCode.getLocation(), qrCode.getNotificationKey().toByteArray(),
-					qrCodeEntry.getMasterPublicKey().toByteArray(), qrCodeEntry.getEntryProof().getNonce1().toByteArray(),
-					qrCodeEntry.getEntryProof().getNonce2().toByteArray(), qrCode.getValidFrom(), qrCode.getValidTo(), null,
-					notifyMeLocationData.toByteArray());
 		} catch (InvalidProtocolBufferException e) {
 			throw new InvalidQRCodeFormatException();
 		}

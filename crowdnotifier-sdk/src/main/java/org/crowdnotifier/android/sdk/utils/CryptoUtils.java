@@ -24,7 +24,6 @@ import com.herumi.mcl.GT;
 import com.herumi.mcl.Mcl;
 
 import org.crowdnotifier.android.sdk.model.*;
-import org.crowdnotifier.android.sdk.model.v2.ProtoV2;
 import org.crowdnotifier.android.sdk.model.v3.ProtoV3;
 
 import static org.crowdnotifier.android.sdk.utils.QrUtils.QR_CODE_VERSION_3;
@@ -66,14 +65,9 @@ public class CryptoUtils {
 		ArrayList<Integer> hourCounters = getAffectedHours(arrivalTime, departureTime);
 		for (Integer hour : hourCounters) {
 
-			byte[] identity;
-			if (venueInfo.getQrCodePayload() == null) {
-				identity = generateIdentityV2(hour, venueInfo);
-			} else {
-				// getAffectedhours() generates hours since UNIX epoch. As the new format requires these to be in seconds since
-				// UNIX epoch, we multiply by 60 minutes * 60 seconds = 3600.
-				identity = generateIdentityV3(venueInfo.getQrCodePayload(), hour * 3600L, 3600);
-			}
+			// getAffectedhours() generates hours since UNIX epoch. As the new format requires these to be in seconds since
+			// UNIX epoch, we multiply by 60 minutes * 60 seconds = 3600.
+			byte[] identity = generateIdentity(venueInfo.getQrCodePayload(), hour * 3600L, 3600);
 
 			byte[] message =
 					(new Gson().toJson(new Payload(arrivalTime, departureTime, venueInfo.getNotificationKey()))).getBytes();
@@ -192,21 +186,11 @@ public class CryptoUtils {
 		return new IBECiphertext(c1.serialize(), c2, c3, nonce);
 	}
 
-	public byte[] generateIdentityV2(ProtoV2.QRCodeContent qrCodeContent, byte[] nonce1, byte[] nonce2, int hour) {
-		byte[] hash1 = crypto_hash_sha256(concatenate(qrCodeContent.toByteArray(), nonce1));
-		return crypto_hash_sha256(concatenate(hash1, nonce2, String.valueOf(hour).getBytes()));
+	public byte[] generateIdentity(ProtoV3.QRCodePayload qrCodePayload, long startOfInterval, int intervalLength) {
+		return generateIdentity(qrCodePayload.toByteArray(), startOfInterval, intervalLength);
 	}
 
-	public byte[] generateIdentityV2(int hour, VenueInfo venueInfo) {
-		byte[] hash1 = crypto_hash_sha256(concatenate(venueInfoToInfoBytes(venueInfo), venueInfo.getNoncePreId()));
-		return crypto_hash_sha256(concatenate(hash1, venueInfo.getNonceTimekey(), String.valueOf(hour).getBytes()));
-	}
-
-	public byte[] generateIdentityV3(ProtoV3.QRCodePayload qrCodePayload, long startOfInterval, int intervalLength) {
-		return generateIdentityV3(qrCodePayload.toByteArray(), startOfInterval, intervalLength);
-	}
-
-	public byte[] generateIdentityV3(byte[] qrCodePayload, long startOfInterval, int intervalLength) {
+	public byte[] generateIdentity(byte[] qrCodePayload, long startOfInterval, int intervalLength) {
 		if (intervalLength < 900 || intervalLength > 86400) {
 			throw new RuntimeException("intervalLength must be between 900 and 86400");
 		}
@@ -222,13 +206,13 @@ public class CryptoUtils {
 				int32ToBytesBigEndian(intervalLength), int64ToBytesBigEndian(startOfInterval), timeKey));
 	}
 
-	public ArrayList<byte[]> generateIdentitiesV3(VenueInfo venueInfo, long startTimestamp, long endTimestamp) {
+	public ArrayList<byte[]> generateIdentities(VenueInfo venueInfo, long startTimestamp, long endTimestamp) {
 		ArrayList<Integer> hourCounters = getAffectedHours(startTimestamp, endTimestamp);
 		ArrayList<byte[]> identities = new ArrayList<>();
 		for (Integer hour : hourCounters) {
 			// getAffectedhours() generates hours since UNIX epoch. As the new format requires these to be in seconds since
 			// UNIX epoch, we multiply by 60 minutes * 60 seconds = 3600.
-			byte[] identity = generateIdentityV3(venueInfo.getQrCodePayload(), hour * 3600L);
+			byte[] identity = generateIdentity(venueInfo.getQrCodePayload(), hour * 3600L, 3600);
 			identities.add(identity);
 		}
 		return identities;
@@ -344,24 +328,6 @@ public class CryptoUtils {
 			result.add(i);
 		}
 		return result;
-	}
-
-	private byte[] venueInfoToInfoBytes(VenueInfo venueInfo) {
-		try {
-			ProtoV3.NotifyMeLocationData notifyMeLocationData = ProtoV3.NotifyMeLocationData.parseFrom(venueInfo.getCountryData());
-			ProtoV2.QRCodeContent qrCodeContent = ProtoV2.QRCodeContent.newBuilder()
-					.setName(venueInfo.getDescription())
-					.setLocation(venueInfo.getAddress())
-					.setRoom(notifyMeLocationData.getRoom())
-					.setVenueTypeValue(notifyMeLocationData.getType().getNumber())
-					.setNotificationKey(ByteString.copyFrom(venueInfo.getNotificationKey()))
-					.setValidFrom(venueInfo.getValidFrom())
-					.setValidTo(venueInfo.getValidTo())
-					.build();
-			return qrCodeContent.toByteArray();
-		} catch (InvalidProtocolBufferException e) {
-			throw new RuntimeException("VenueInfo CountryData contained invalid Bytes");
-		}
 	}
 
 	private byte[] concatenate(byte[]... byteArrays) {

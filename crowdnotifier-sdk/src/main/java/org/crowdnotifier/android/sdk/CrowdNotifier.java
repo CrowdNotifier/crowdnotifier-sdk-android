@@ -9,7 +9,6 @@ import org.crowdnotifier.android.sdk.model.EncryptedVenueVisit;
 import org.crowdnotifier.android.sdk.model.ExposureEvent;
 import org.crowdnotifier.android.sdk.model.ProblematicEventInfo;
 import org.crowdnotifier.android.sdk.model.VenueInfo;
-import org.crowdnotifier.android.sdk.model.v3.ProtoV3;
 import org.crowdnotifier.android.sdk.storage.ExposureStorage;
 import org.crowdnotifier.android.sdk.storage.VenueVisitStorage;
 import org.crowdnotifier.android.sdk.utils.CryptoUtils;
@@ -151,7 +150,7 @@ public class CrowdNotifier {
 	 */
 	public ArrayList<byte[]> generateIdentities(VenueInfo venueInfo, long startTimestamp, long endTimestamp) {
 		CryptoUtils crypto = CryptoUtils.getInstance();
-		return crypto.generateIdentitiesV3(venueInfo, startTimestamp, endTimestamp);
+		return crypto.generateIdentities(venueInfo, startTimestamp, endTimestamp);
 	}
 
 }
