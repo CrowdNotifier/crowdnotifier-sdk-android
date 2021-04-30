@@ -44,7 +44,7 @@ public class CryptoUnitTests {
 	public void testGenerateIdentity() {
 
 		for (TestVectors.IdentityTest identityTest : testVectors.identityTestVector) {
-			byte[] identity = cryptoUtils.generateIdentityV3(identityTest.qrCodePayload, identityTest.startOfInterval);
+			byte[] identity = cryptoUtils.generateIdentityV3(identityTest.qrCodePayload, identityTest.startOfInterval, 3600);
 			
 			assertArrayEquals(identityTest.identity, identity);
 		}

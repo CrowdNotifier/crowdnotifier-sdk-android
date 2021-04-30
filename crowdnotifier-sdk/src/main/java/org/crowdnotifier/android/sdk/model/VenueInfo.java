@@ -5,21 +5,21 @@ public class VenueInfo {
 	private String address;
 	private byte[] notificationKey;
 	private byte[] publicKey;
-	private byte[] nonce1;
-	private byte[] nonce2;
+	private byte[] noncePreId;
+	private byte[] nonceTimekey;
 	private long validFrom;
 	private long validTo;
 	private byte[] qrCodePayload; // if null -> old CrowdNotifier QR Code Version (2)
 	private byte[] countryData;
 
-	public VenueInfo(String description, String address, byte[] notificationKey, byte[] publicKey, byte[] nonce1,
-			byte[] nonce2, long validFrom, long validTo, byte[] qrCodePayload, byte[] countryData) {
+	public VenueInfo(String description, String address, byte[] notificationKey, byte[] publicKey, byte[] noncePreId,
+			byte[] nonceTimekey, long validFrom, long validTo, byte[] qrCodePayload, byte[] countryData) {
 		this.description = description;
 		this.address = address;
 		this.notificationKey = notificationKey;
 		this.publicKey = publicKey;
-		this.nonce1 = nonce1;
-		this.nonce2 = nonce2;
+		this.noncePreId = noncePreId;
+		this.nonceTimekey = nonceTimekey;
 		this.validFrom = validFrom;
 		this.validTo = validTo;
 		this.qrCodePayload = qrCodePayload;
@@ -43,12 +43,12 @@ public class VenueInfo {
 		return description;
 	}
 
-	public byte[] getNonce1() {
-		return nonce1;
+	public byte[] getNoncePreId() {
+		return noncePreId;
 	}
 
-	public byte[] getNonce2() {
-		return nonce2;
+	public byte[] getNonceTimekey() {
+		return nonceTimekey;
 	}
 
 	public long getValidFrom() {
