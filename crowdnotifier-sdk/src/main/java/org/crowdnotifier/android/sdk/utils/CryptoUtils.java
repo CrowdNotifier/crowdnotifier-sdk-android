@@ -242,7 +242,7 @@ public class CryptoUtils {
 	/**
 	 * Generates Base64 encoded String of an Entry QR Code
 	 */
-	public String generateEntryQrCode(String description, String address, byte[] countryData, long validFrom, long validTo,
+	public VenueInfo generateEntryQrCode(String description, String address, byte[] countryData, long validFrom, long validTo,
 			byte[] masterPublicKey) {
 
 		TraceLocation traceLocation = TraceLocation.newBuilder()
@@ -266,7 +266,11 @@ public class CryptoUtils {
 				.setCountryData(ByteString.copyFrom(countryData))
 				.build();
 
-		return Base64Util.toBase64(qrCodePayload.toByteArray());
+		try {
+			return QrUtils.getVenueInfoFromQrCode(Base64Util.toBase64(qrCodePayload.toByteArray()));
+		} catch (QrUtils.InvalidQRCodeFormatException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	private byte[] int64ToBytesBigEndian(long l) {

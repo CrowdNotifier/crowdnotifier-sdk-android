@@ -347,7 +347,7 @@ public class MatchingV3Tests {
 			Mcl.add(masterPublicKey, locationKeyPair.publicKey, haKeyPair.publicKey);
 
 			String qrEntryQRCodeBase64String = cryptoUtils.generateEntryQrCode(description, address, countryData, validFrom,
-					validTo, masterPublicKey.serialize());
+					validTo, masterPublicKey.serialize()).toQrCodeString();
 
 			try {
 				this.qrCodePayload = QRCodePayload.parseFrom(Base64Util.fromBase64(qrEntryQRCodeBase64String));

@@ -27,18 +27,18 @@ public class QrUtils {
 		if (!urlPrefix.equals(expectedQrCodePrefix)) throw new InvalidQRCodeFormatException();
 
 		if (String.valueOf(QR_CODE_VERSION_3).equals(version)) {
+			checkQrCodeValidity(fragmentSplit[1]);
 			return getVenueInfoFromQrCode(fragmentSplit[1]);
 		} else {
 			throw new InvalidQRCodeVersionException();
 		}
 	}
 
-	private static VenueInfo getVenueInfoFromQrCode(String qrCodeString) throws QRException {
+	private static void checkQrCodeValidity(String qrCodeString) throws QRException {
 		try {
 			byte[] decoded = Base64Util.fromBase64(qrCodeString);
 			QRCodePayload qrCodeEntry = QRCodePayload.parseFrom(decoded);
 			TraceLocation locationData = qrCodeEntry.getLocationData();
-			CrowdNotifierData crowdNotifierData = qrCodeEntry.getCrowdNotifierData();
 
 			if (System.currentTimeMillis() / 1000 < locationData.getStartTimestamp()) {
 				throw new NotYetValidException();
@@ -46,6 +46,17 @@ public class QrUtils {
 			if (System.currentTimeMillis() / 1000 > locationData.getEndTimestamp()) {
 				throw new NotValidAnymoreException();
 			}
+		} catch (InvalidProtocolBufferException e) {
+			throw new InvalidQRCodeFormatException();
+		}
+	}
+
+	protected static VenueInfo getVenueInfoFromQrCode(String qrCodeString) throws InvalidQRCodeFormatException {
+		try {
+			byte[] decoded = Base64Util.fromBase64(qrCodeString);
+			QRCodePayload qrCodeEntry = QRCodePayload.parseFrom(decoded);
+			TraceLocation locationData = qrCodeEntry.getLocationData();
+			CrowdNotifierData crowdNotifierData = qrCodeEntry.getCrowdNotifierData();
 
 			CryptoUtils.NoncesAndNotificationKey cryptoData = CryptoUtils.getInstance().getNoncesAndNotificationKey(qrCodeEntry);
 

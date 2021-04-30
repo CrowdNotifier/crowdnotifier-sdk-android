@@ -123,16 +123,16 @@ public class CrowdNotifier {
 	}
 
 	/**
-	 * Generates an Entry QR Code encoded as Base64 String
+	 * Generates a VenueInfo object
 	 * @param description Description of the Event
 	 * @param address Address of the Event
 	 * @param countryData Any additional data encoded as a byte array
 	 * @param validFrom Validity start of the QR Code (in s since unix epoch)
 	 * @param validTo Validity end of the QR Code (in s since unix epoch)
 	 * @param masterPublicKey The Master Public Key (as specified in the CrowdNotifier Protocol)
-	 * @return An Entry QR Code encoded as Base64 String
+	 * @return VenueInfo object
 	 */
-	public String generateEntryQrCode(String description, String address, byte[] countryData, long validFrom, long validTo,
+	public VenueInfo generateVenueInfo(String description, String address, byte[] countryData, long validFrom, long validTo,
 			byte[] masterPublicKey) {
 		CryptoUtils crypto = CryptoUtils.getInstance();
 		return crypto.generateEntryQrCode(description, address, countryData, validFrom, validTo, masterPublicKey);

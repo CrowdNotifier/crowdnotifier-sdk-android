@@ -1,5 +1,7 @@
 package org.crowdnotifier.android.sdk.model;
 
+import org.crowdnotifier.android.sdk.utils.Base64Util;
+
 public class VenueInfo {
 	private String description;
 	private String address;
@@ -69,6 +71,10 @@ public class VenueInfo {
 
 	public byte[] getCountryData() {
 		return countryData;
+	}
+
+	public String toQrCodeString() {
+		return Base64Util.toBase64(qrCodePayload);
 	}
 
 }
