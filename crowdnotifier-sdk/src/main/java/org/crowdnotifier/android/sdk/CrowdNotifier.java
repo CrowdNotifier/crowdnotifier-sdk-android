@@ -87,11 +87,8 @@ public class CrowdNotifier {
 					.searchAndDecryptMatches(problematicEventInfo, VenueVisitStorage.getInstance(context).getEntries());
 
 			for (ExposureEvent match : matches) {
-				if (match.getStartTime() <= problematicEventInfo.getEndTimestamp() &&
-						match.getEndTime() >= problematicEventInfo.getStartTimestamp()) {
-					boolean added = exposureStorage.addEntry(match);
-					if (added) newExposureEvents.add(match);
-				}
+				boolean added = exposureStorage.addEntry(match);
+				if (added) newExposureEvents.add(match);
 			}
 		}
 		return newExposureEvents;

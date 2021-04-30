@@ -161,8 +161,8 @@ public class MatchingV3Tests {
 			Trace trace = createTrace(preTraceWithProof, haKeyPair, message, countryData);
 
 			publishedSKs.add(new ProblematicEventInfo(trace.getIdentity().toByteArray(),
-					trace.getSecretKeyForIdentity().toByteArray(), trace.getStartTime(), trace.getEndTime(),
-					trace.getEncryptedAssociatedData().toByteArray(), trace.getNonce().toByteArray()));
+					trace.getSecretKeyForIdentity().toByteArray(), trace.getEncryptedAssociatedData().toByteArray(),
+					trace.getNonce().toByteArray(), new DayDate(trace.getStartOfDayTimestamp())));
 		}
 		return publishedSKs;
 	}
@@ -206,13 +206,12 @@ public class MatchingV3Tests {
 
 		byte[] nonce = cryptoUtils.getRandomValue(Box.NONCEBYTES);
 		byte[] encryptedAssociatedData = encryptAssociatedData(preTraceWithProof.getPreTrace().getNotificationKey().toByteArray(),
-				message, countryData, nonce);
+				message, countryData, nonce, preTraceWithProof.getStartTime(), preTraceWithProof.getEndTime());
 
 		return Trace.newBuilder()
 				.setIdentity(preTrace.getIdentity())
 				.setSecretKeyForIdentity(ByteString.copyFrom(secretKeyForIdentity.serialize()))
-				.setStartTime(preTraceWithProof.getStartTime())
-				.setEndTime(preTraceWithProof.getEndTime())
+				.setStartOfDayTimestamp(new DayDate(preTraceWithProof.getStartTime()).getStartOfDayTimestamp())
 				.setNonce(ByteString.copyFrom(nonce))
 				.setEncryptedAssociatedData(ByteString.copyFrom(encryptedAssociatedData))
 				.build();
@@ -282,11 +281,14 @@ public class MatchingV3Tests {
 		return new KeyPair(publicKey, privateKey);
 	}
 
-	private byte[] encryptAssociatedData(byte[] secretKey, String message, byte[] countryData, byte[] nonce) {
+	private byte[] encryptAssociatedData(byte[] secretKey, String message, byte[] countryData, byte[] nonce, long startTimestamp,
+			long endTimestamp) {
 		AssociatedData associatedData = AssociatedData.newBuilder()
 				.setMessage(message)
 				.setCountryData(ByteString.copyFrom(countryData))
 				.setVersion(QR_CODE_VERSION)
+				.setStartTimestamp(startTimestamp)
+				.setEndTimestamp(endTimestamp)
 				.build();
 
 		byte[] messageBytes = associatedData.toByteArray();

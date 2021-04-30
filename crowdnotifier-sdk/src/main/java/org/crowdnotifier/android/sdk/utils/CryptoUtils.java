@@ -1,5 +1,7 @@
 package org.crowdnotifier.android.sdk.utils;
 
+import android.util.Log;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -90,9 +92,11 @@ public class CryptoUtils {
 			secretKeyForIdentity.deserialize(eventInfo.getSecretKeyForIdentity());
 
 			for (IBECiphertext ibeCiphertext : venueVisit.getIbeCiphertextEntries()) {
-				long startOfDay = ibeCiphertext.getDayDate().getStartOfDayTimestamp();
-				long endOfDay = ibeCiphertext.getDayDate().getNextDay().getStartOfDayTimestamp();
-				if (!doIntersect(startOfDay, endOfDay, eventInfo.getStartTimestamp(), eventInfo.getEndTimestamp())) continue;
+				long startOfDayLocalEntry = ibeCiphertext.getDayDate().getStartOfDayTimestamp();
+				long endOfDayLocalEntry = ibeCiphertext.getDayDate().getNextDay().getStartOfDayTimestamp();
+				long startOfDayEventInfo = eventInfo.getDayDate().getStartOfDayTimestamp();
+				long endOfDay1EventInfo = eventInfo.getDayDate().getNextDay().getStartOfDayTimestamp();
+				if (!doIntersect(startOfDayLocalEntry, endOfDayLocalEntry, startOfDayEventInfo, endOfDay1EventInfo)) continue;
 
 				byte[] msg_p = decryptInternal(ibeCiphertext, secretKeyForIdentity, eventInfo.getIdentity());
 				if (msg_p == null) continue;
@@ -104,20 +108,25 @@ public class CryptoUtils {
 								eventInfo.getCipherTextNonce());
 
 				String decryptedMessageString;
-				byte[] countryData = null;
+				byte[] countryData;
+				AssociatedData associatedData;
 				try {
-					AssociatedData associatedData = AssociatedData.parseFrom(decryptedMessage);
+					associatedData = AssociatedData.parseFrom(decryptedMessage);
 					decryptedMessageString = associatedData.getMessage();
 					countryData = associatedData.getCountryData().toByteArray();
 				} catch (InvalidProtocolBufferException e) {
-					decryptedMessageString = new String(decryptedMessage);
+					Log.w("CryptoUtils", "Could not parse associated Data");
+					break;
 				}
 
-				ExposureEvent exposureEvent = new ExposureEvent(venueVisit.getId(), payload.getArrivalTime(),
-						payload.getDepartureTime(), decryptedMessageString, countryData);
+				if (doIntersect(payload.getArrivalTime(), payload.getDepartureTime(), associatedData.getStartTimestamp(),
+						associatedData.getEndTimestamp())) {
+					ExposureEvent exposureEvent = new ExposureEvent(venueVisit.getId(), payload.getArrivalTime(),
+							payload.getDepartureTime(), decryptedMessageString, countryData);
 
-				exposureEvents.add(exposureEvent);
-				break;
+					exposureEvents.add(exposureEvent);
+					break;
+				}
 			}
 		}
 		return exposureEvents;
