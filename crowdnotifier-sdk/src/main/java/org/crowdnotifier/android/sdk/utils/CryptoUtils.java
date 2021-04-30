@@ -2,11 +2,18 @@ package org.crowdnotifier.android.sdk.utils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
+import com.google.crypto.tink.subtle.Hkdf;
 import com.google.gson.Gson;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.goterl.lazycode.lazysodium.LazySodiumAndroid;
 import com.goterl.lazycode.lazysodium.SodiumAndroid;
 import com.goterl.lazycode.lazysodium.interfaces.Box;
@@ -17,7 +24,13 @@ import com.herumi.mcl.GT;
 import com.herumi.mcl.Mcl;
 
 import org.crowdnotifier.android.sdk.model.*;
+import org.crowdnotifier.android.sdk.model.v2.ProtoV2;
+import org.crowdnotifier.android.sdk.model.v3.ProtoV3;
 
+/**
+ * This class contains all cryptographic calculations, such as encrypting VenueVisits or matching stored encrypted VenueVisits with
+ * ProblematicEventInfos.
+ */
 public class CryptoUtils {
 
 	private static final int HASH_BYTES = 32;
@@ -43,15 +56,21 @@ public class CryptoUtils {
 	public EncryptedVenueVisit getEncryptedVenueVisit(long arrivalTime, long departureTime, VenueInfo venueInfo) {
 
 		G2 masterPublicKey = new G2();
-		masterPublicKey.deserialize(venueInfo.getMasterPublicKey());
+		masterPublicKey.deserialize(venueInfo.getPublicKey());
 
-		//scan
 		ArrayList<IBECiphertext> ibeCiphertextsEntries = new ArrayList<>();
 
 		ArrayList<Integer> hourCounters = getAffectedHours(arrivalTime, departureTime);
 		for (Integer hour : hourCounters) {
 
-			byte[] identity = generateIdentity(hour, venueInfo);
+			byte[] identity;
+			if (venueInfo.getQrCodePayload() == null) {
+				identity = generateIdentityV2(hour, venueInfo);
+			} else {
+				// getAffectedhours() generates hours since UNIX epoch. As the new format requires these to be in seconds since
+				// UNIX epoch, we multiply by 60 minutes * 60 seconds = 3600.
+				identity = generateIdentityV3(venueInfo.getQrCodePayload(), hour * 3600L, 3600);
+			}
 
 			byte[] message =
 					(new Gson().toJson(new Payload(arrivalTime, departureTime, venueInfo.getNotificationKey()))).getBytes();
@@ -75,19 +94,28 @@ public class CryptoUtils {
 			G1 secretKeyForIdentity = new G1();
 			secretKeyForIdentity.deserialize(eventInfo.getSecretKeyForIdentity());
 
-			for (IBECiphertext ibeCiphertext : venueVisit.getIbeCiphertextEntries()){
+			for (IBECiphertext ibeCiphertext : venueVisit.getIbeCiphertextEntries()) {
 				byte[] msg_p = decryptInternal(ibeCiphertext, secretKeyForIdentity, eventInfo.getIdentity());
 				if (msg_p == null) continue;
 
 				Payload payload = new Gson().fromJson(new String(msg_p), Payload.class);
 
-				byte[] decryptedMessage = crypto_secretbox_open_easy(payload.getNotificationKey(), eventInfo.getEncryptedMessage(),
-						eventInfo.getNonce());
+				byte[] decryptedMessage =
+						crypto_secretbox_open_easy(payload.getNotificationKey(), eventInfo.getEncryptedAssociatedData(),
+								eventInfo.getCipherTextNonce());
 
-				String decryptedMessageString = new String(decryptedMessage);
+				String decryptedMessageString;
+				byte[] countryData = null;
+				try {
+					ProtoV3.AssociatedData associatedData = ProtoV3.AssociatedData.parseFrom(decryptedMessage);
+					decryptedMessageString = associatedData.getMessage();
+					countryData = associatedData.getCountryData().toByteArray();
+				} catch (InvalidProtocolBufferException e) {
+					decryptedMessageString = new String(decryptedMessage);
+				}
 
 				ExposureEvent exposureEvent = new ExposureEvent(venueVisit.getId(), payload.getArrivalTime(),
-						payload.getDepartureTime(), decryptedMessageString);
+						payload.getDepartureTime(), decryptedMessageString, countryData);
 
 				exposureEvents.add(exposureEvent);
 				break;
@@ -117,7 +145,7 @@ public class CryptoUtils {
 
 		//Additional verification
 		Fr r_p = new Fr();
-		r_p.setHashOf(concatenate(x_p, concatenate(identity, msg_p)));
+		r_p.setHashOf(concatenate(x_p, identity, msg_p));
 
 		G2 c1_p = new G2();
 		Mcl.mul(c1_p, baseG2(), r_p);
@@ -137,7 +165,7 @@ public class CryptoUtils {
 		byte[] x = randombytes_buf();
 
 		Fr r = new Fr();
-		r.setHashOf(concatenate(x, concatenate(identity, message)));
+		r.setHashOf(concatenate(x, identity, message));
 
 		G2 c1 = new G2();
 		Mcl.mul(c1, baseG2(), r);
@@ -161,14 +189,65 @@ public class CryptoUtils {
 		return new IBECiphertext(c1.serialize(), c2, c3, nonce);
 	}
 
-	public byte[] generateIdentity(Qr.QRCodeContent qrCodeContent, byte[] nonce1, byte[] nonce2, int hour) {
+	public byte[] generateIdentityV2(ProtoV2.QRCodeContent qrCodeContent, byte[] nonce1, byte[] nonce2, int hour) {
 		byte[] hash1 = crypto_hash_sha256(concatenate(qrCodeContent.toByteArray(), nonce1));
-		return crypto_hash_sha256(concatenate(hash1, concatenate(nonce2, String.valueOf(hour).getBytes())));
+		return crypto_hash_sha256(concatenate(hash1, nonce2, String.valueOf(hour).getBytes()));
 	}
 
-	public byte[] generateIdentity(int hour, VenueInfo venueInfo) {
-		byte[] hash1 = crypto_hash_sha256(concatenate(venueInfoToInfoBytes(venueInfo), venueInfo.getNonce1()));
-		return crypto_hash_sha256(concatenate(hash1, concatenate(venueInfo.getNonce2(), String.valueOf(hour).getBytes())));
+	public byte[] generateIdentityV2(int hour, VenueInfo venueInfo) {
+		byte[] hash1 = crypto_hash_sha256(concatenate(venueInfoToInfoBytes(venueInfo), venueInfo.getNoncePreId()));
+		return crypto_hash_sha256(concatenate(hash1, venueInfo.getNonceTimekey(), String.valueOf(hour).getBytes()));
+	}
+
+	public byte[] generateIdentityV3(ProtoV3.QRCodePayload qrCodePayload, long startOfInterval, int intervalLength) {
+		return generateIdentityV3(qrCodePayload.toByteArray(), startOfInterval, intervalLength);
+	}
+
+	public byte[] generateIdentityV3(byte[] qrCodePayload, long startOfInterval, int intervalLength) {
+		if (intervalLength < 900 || intervalLength > 86400) {
+			throw new RuntimeException("intervalLength must be between 900 and 86400");
+		}
+		NoncesAndNotificationKey cryptoData = getNoncesAndNotificationKey(qrCodePayload);
+
+		byte[] preid = crypto_hash_sha256(
+				concatenate("CN-PREID".getBytes(StandardCharsets.US_ASCII), qrCodePayload, cryptoData.noncePreId));
+
+		byte[] timeKey = crypto_hash_sha256(concatenate("CN-TIMEKEY".getBytes(StandardCharsets.US_ASCII),
+				int32ToBytesBigEndian(intervalLength), int64ToBytesBigEndian(startOfInterval), cryptoData.nonceTimekey));
+
+		return crypto_hash_sha256(concatenate("CN-ID".getBytes(StandardCharsets.US_ASCII), preid,
+				int32ToBytesBigEndian(intervalLength), int64ToBytesBigEndian(startOfInterval), timeKey));
+	}
+
+	public NoncesAndNotificationKey getNoncesAndNotificationKey(ProtoV3.QRCodePayload qrCodePayload) {
+		return getNoncesAndNotificationKey(qrCodePayload.toByteArray());
+	}
+
+	public NoncesAndNotificationKey getNoncesAndNotificationKey(byte[] qrCodePayload) {
+		try {
+			byte[] hkdfOutput = Hkdf.computeHkdf("HMACSHA256", qrCodePayload, new byte[0],
+					"CrowdNotifier_v3".getBytes(StandardCharsets.US_ASCII), 96);
+			byte[] noncePreId = Arrays.copyOfRange(hkdfOutput, 0, 32);
+			byte[] nonceTimekey = Arrays.copyOfRange(hkdfOutput, 32, 64);
+			byte[] notificationKey = Arrays.copyOfRange(hkdfOutput, 64, 96);
+			return new NoncesAndNotificationKey(noncePreId, nonceTimekey, notificationKey);
+		} catch (GeneralSecurityException e) {
+			throw new RuntimeException("HKDF threw GeneralSecurityException");
+		}
+	}
+
+	private byte[] int64ToBytesBigEndian(long l) {
+		ByteBuffer byteBuffer = ByteBuffer.allocate(8);
+		byteBuffer.order(ByteOrder.BIG_ENDIAN);
+		byteBuffer.putLong(l);
+		return byteBuffer.array();
+	}
+
+	private byte[] int32ToBytesBigEndian(int i) {
+		ByteBuffer byteBuffer = ByteBuffer.allocate(4);
+		byteBuffer.order(ByteOrder.BIG_ENDIAN);
+		byteBuffer.putInt(i);
+		return byteBuffer.array();
 	}
 
 	private byte[] crypto_secretbox_easy(byte[] secretKey, byte[] message, byte[] nonce) {
@@ -207,6 +286,10 @@ public class CryptoUtils {
 		return out;
 	}
 
+	/**
+	 * @return a List of Integers containing all hours since UNIX epoch that intersect with the (arrivalTime, departureTime)
+	 * interval.
+	 */
 	public ArrayList<Integer> getAffectedHours(long arrivalTime, long departureTime) {
 		long ONE_HOUR_IN_MILLISECONDS = 1000L * 60 * 60;
 		long startHour = arrivalTime / ONE_HOUR_IN_MILLISECONDS;
@@ -219,24 +302,33 @@ public class CryptoUtils {
 	}
 
 	private byte[] venueInfoToInfoBytes(VenueInfo venueInfo) {
-		Qr.QRCodeContent qrCodeContent = Qr.QRCodeContent.newBuilder()
-				.setName(venueInfo.getName())
-				.setLocation(venueInfo.getLocation())
-				.setRoom(venueInfo.getRoom())
-				.setVenueType(venueInfo.getVenueType())
-				.setNotificationKey(ByteString.copyFrom(venueInfo.getNotificationKey()))
-				.setValidFrom(venueInfo.getValidFrom())
-				.setValidTo(venueInfo.getValidTo())
-				.build();
-		return qrCodeContent.toByteArray();
+		try {
+			ProtoV3.NotifyMeLocationData notifyMeLocationData = ProtoV3.NotifyMeLocationData.parseFrom(venueInfo.getCountryData());
+			ProtoV2.QRCodeContent qrCodeContent = ProtoV2.QRCodeContent.newBuilder()
+					.setName(venueInfo.getDescription())
+					.setLocation(venueInfo.getAddress())
+					.setRoom(notifyMeLocationData.getRoom())
+					.setVenueTypeValue(notifyMeLocationData.getType().getNumber())
+					.setNotificationKey(ByteString.copyFrom(venueInfo.getNotificationKey()))
+					.setValidFrom(venueInfo.getValidFrom())
+					.setValidTo(venueInfo.getValidTo())
+					.build();
+			return qrCodeContent.toByteArray();
+		} catch (InvalidProtocolBufferException e) {
+			throw new RuntimeException("VenueInfo CountryData contained invalid Bytes");
+		}
 	}
 
-	private byte[] concatenate(byte[] a, byte[] b) {
+	private byte[] concatenate(byte[]... byteArrays) {
 		try {
-			ByteArrayOutputStream outputStream = new ByteArrayOutputStream(a.length + b.length);
-			outputStream.write(a);
-			outputStream.write(b);
-			return outputStream.toByteArray();
+			byte[] result = new byte[0];
+			for (byte[] byteArray : byteArrays) {
+				ByteArrayOutputStream outputStream = new ByteArrayOutputStream(result.length + byteArray.length);
+				outputStream.write(result);
+				outputStream.write(byteArray);
+				result = outputStream.toByteArray();
+			}
+			return result;
 		} catch (IOException e) {
 			throw new RuntimeException("Byte array concatenation failed");
 		}
@@ -253,6 +345,19 @@ public class CryptoUtils {
 				"927553665492332455747201965776037880757740193453592970025027978" +
 				"793976877002675564980949289727957565575433344219582");
 		return baseG2;
+	}
+
+	public class NoncesAndNotificationKey {
+		public final byte[] noncePreId;
+		public final byte[] nonceTimekey;
+		public final byte[] notificationKey;
+
+		public NoncesAndNotificationKey(byte[] noncePreId, byte[] nonceTimekey, byte[] notificationKey) {
+			this.noncePreId = noncePreId;
+			this.nonceTimekey = nonceTimekey;
+			this.notificationKey = notificationKey;
+		}
+
 	}
 
 }

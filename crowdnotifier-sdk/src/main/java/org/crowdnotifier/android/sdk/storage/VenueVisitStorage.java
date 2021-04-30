@@ -18,6 +18,9 @@ import com.google.gson.reflect.TypeToken;
 import org.crowdnotifier.android.sdk.model.DayDate;
 import org.crowdnotifier.android.sdk.model.EncryptedVenueVisit;
 
+/**
+ * This class stores all encrypted VenueVisits to EncryptedSharedPreferences.
+ */
 public class VenueVisitStorage {
 
 	private static final String KEY_CROWDNOTIFIER_STORE = "KEY_CROWDNOTIFIER_STORE";
