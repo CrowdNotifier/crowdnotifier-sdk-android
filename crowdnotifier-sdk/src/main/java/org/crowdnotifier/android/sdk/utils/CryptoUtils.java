@@ -75,10 +75,10 @@ public class CryptoUtils {
 			byte[] message =
 					(new Gson().toJson(new Payload(arrivalTime, departureTime, venueInfo.getNotificationKey()))).getBytes();
 
-			ibeCiphertextsEntries.add(encryptInternal(masterPublicKey, identity, message));
+			ibeCiphertextsEntries.add(encryptInternal(masterPublicKey, identity, message, hour * 3600L));
 		}
 
-		return new EncryptedVenueVisit(new DayDate(departureTime), ibeCiphertextsEntries);
+		return new EncryptedVenueVisit(ibeCiphertextsEntries);
 	}
 
 	public List<ExposureEvent> searchAndDecryptMatches(ProblematicEventInfo eventInfo, List<EncryptedVenueVisit> venueVisits) {
@@ -87,14 +87,14 @@ public class CryptoUtils {
 
 		for (EncryptedVenueVisit venueVisit : venueVisits) {
 
-			long venueVisitStart = venueVisit.getDayDate().getStartOfDayTimestamp();
-			long venueVisitEnd = venueVisit.getDayDate().getNextDay().getStartOfDayTimestamp();
-			if (!doIntersect(venueVisitStart, venueVisitEnd, eventInfo.getStartTimestamp(), eventInfo.getEndTimestamp())) continue;
-
 			G1 secretKeyForIdentity = new G1();
 			secretKeyForIdentity.deserialize(eventInfo.getSecretKeyForIdentity());
 
 			for (IBECiphertext ibeCiphertext : venueVisit.getIbeCiphertextEntries()) {
+				long startOfDay = ibeCiphertext.getDayDate().getStartOfDayTimestamp();
+				long endOfDay = ibeCiphertext.getDayDate().getNextDay().getStartOfDayTimestamp();
+				if (!doIntersect(startOfDay, endOfDay, eventInfo.getStartTimestamp(), eventInfo.getEndTimestamp())) continue;
+
 				byte[] msg_p = decryptInternal(ibeCiphertext, secretKeyForIdentity, eventInfo.getIdentity());
 				if (msg_p == null) continue;
 
@@ -160,7 +160,7 @@ public class CryptoUtils {
 		return msg_p;
 	}
 
-	public IBECiphertext encryptInternal(G2 masterPublicKey, byte[] identity, byte[] message) {
+	public IBECiphertext encryptInternal(G2 masterPublicKey, byte[] identity, byte[] message, long intervalStart) {
 
 		byte[] x = getRandomValue(NONCE_BYTES);
 
@@ -186,7 +186,7 @@ public class CryptoUtils {
 
 		byte[] c3 = crypto_secretbox_easy(crypto_hash_sha256(x), message, nonce);
 
-		return new IBECiphertext(c1.serialize(), c2, c3, nonce);
+		return new IBECiphertext(c1.serialize(), c2, c3, nonce, new DayDate(intervalStart * 1000));
 	}
 
 	public byte[] generateIdentity(QRCodePayload qrCodePayload, long startOfInterval, int intervalLength) {

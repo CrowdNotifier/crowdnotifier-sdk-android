@@ -200,7 +200,7 @@ public class MatchingV3Tests {
 		byte[] msg_orig = cryptoUtils.getRandomValue(NONCE_LENGTH);
 		G2 masterPublicKey = new G2();
 		masterPublicKey.deserialize(proof.getMasterPublicKey().toByteArray());
-		IBECiphertext ibeCiphertext = cryptoUtils.encryptInternal(masterPublicKey, identity, msg_orig);
+		IBECiphertext ibeCiphertext = cryptoUtils.encryptInternal(masterPublicKey, identity, msg_orig, 0);
 		byte[] msg_dec = cryptoUtils.decryptInternal(ibeCiphertext, secretKeyForIdentity, identity);
 		if (msg_dec == null) throw new RuntimeException("Health Authority could not verify Trace");
 

@@ -17,6 +17,7 @@ import com.google.gson.reflect.TypeToken;
 
 import org.crowdnotifier.android.sdk.model.DayDate;
 import org.crowdnotifier.android.sdk.model.EncryptedVenueVisit;
+import org.crowdnotifier.android.sdk.model.IBECiphertext;
 
 /**
  * This class stores all encrypted VenueVisits to EncryptedSharedPreferences.
@@ -82,10 +83,17 @@ public class VenueVisitStorage {
 
 	public void removeEntriesBefore(int maxDaysToKeep) {
 		List<EncryptedVenueVisit> venueVisitList = getEntries();
-		DayDate lastDateToKeep = new DayDate().subtractDays(maxDaysToKeep);
+		DayDate oldestDateToKeep = new DayDate().subtractDays(maxDaysToKeep);
 		Iterator<EncryptedVenueVisit> iterator = venueVisitList.iterator();
 		while (iterator.hasNext()) {
-			if (iterator.next().getDayDate().isBefore(lastDateToKeep)) {
+			boolean shouldDelete = true;
+			for (IBECiphertext ibeCiphertext : iterator.next().getIbeCiphertextEntries()) {
+				if (oldestDateToKeep.isBeforeOrEquals(ibeCiphertext.getDayDate())) {
+					shouldDelete = false;
+					break;
+				}
+			}
+			if (shouldDelete) {
 				iterator.remove();
 			}
 		}
