@@ -2,8 +2,10 @@ package org.crowdnotifier.android.sdk.utils;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import org.crowdnotifier.android.sdk.model.v3.ProtoV3;
 import org.crowdnotifier.android.sdk.model.VenueInfo;
+import org.crowdnotifier.android.sdk.model.v3.CrowdNotifierData;
+import org.crowdnotifier.android.sdk.model.v3.QRCodePayload;
+import org.crowdnotifier.android.sdk.model.v3.TraceLocation;
 
 /**
  * This class extracts the VenueInfo object from a provided QR Code URL in its only public function getQrInfo(...). It performs
@@ -34,9 +36,9 @@ public class QrUtils {
 	private static VenueInfo getVenueInfoFromQrCode(String qrCodeString) throws QRException {
 		try {
 			byte[] decoded = Base64Util.fromBase64(qrCodeString);
-			ProtoV3.QRCodePayload qrCodeEntry = ProtoV3.QRCodePayload.parseFrom(decoded);
-			ProtoV3.TraceLocation locationData = qrCodeEntry.getLocationData();
-			ProtoV3.CrowdNotifierData crowdNotifierData = qrCodeEntry.getCrowdNotifierData();
+			QRCodePayload qrCodeEntry = QRCodePayload.parseFrom(decoded);
+			TraceLocation locationData = qrCodeEntry.getLocationData();
+			CrowdNotifierData crowdNotifierData = qrCodeEntry.getCrowdNotifierData();
 
 			if (System.currentTimeMillis() / 1000 < locationData.getStartTimestamp()) {
 				throw new NotYetValidException();

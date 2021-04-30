@@ -24,7 +24,10 @@ import com.herumi.mcl.GT;
 import com.herumi.mcl.Mcl;
 
 import org.crowdnotifier.android.sdk.model.*;
-import org.crowdnotifier.android.sdk.model.v3.ProtoV3;
+import org.crowdnotifier.android.sdk.model.v3.AssociatedData;
+import org.crowdnotifier.android.sdk.model.v3.CrowdNotifierData;
+import org.crowdnotifier.android.sdk.model.v3.QRCodePayload;
+import org.crowdnotifier.android.sdk.model.v3.TraceLocation;
 
 import static org.crowdnotifier.android.sdk.utils.QrUtils.QR_CODE_VERSION_3;
 
@@ -104,7 +107,7 @@ public class CryptoUtils {
 				String decryptedMessageString;
 				byte[] countryData = null;
 				try {
-					ProtoV3.AssociatedData associatedData = ProtoV3.AssociatedData.parseFrom(decryptedMessage);
+					AssociatedData associatedData = AssociatedData.parseFrom(decryptedMessage);
 					decryptedMessageString = associatedData.getMessage();
 					countryData = associatedData.getCountryData().toByteArray();
 				} catch (InvalidProtocolBufferException e) {
@@ -186,7 +189,7 @@ public class CryptoUtils {
 		return new IBECiphertext(c1.serialize(), c2, c3, nonce);
 	}
 
-	public byte[] generateIdentity(ProtoV3.QRCodePayload qrCodePayload, long startOfInterval, int intervalLength) {
+	public byte[] generateIdentity(QRCodePayload qrCodePayload, long startOfInterval, int intervalLength) {
 		return generateIdentity(qrCodePayload.toByteArray(), startOfInterval, intervalLength);
 	}
 
@@ -218,7 +221,7 @@ public class CryptoUtils {
 		return identities;
 	}
 
-	public NoncesAndNotificationKey getNoncesAndNotificationKey(ProtoV3.QRCodePayload qrCodePayload) {
+	public NoncesAndNotificationKey getNoncesAndNotificationKey(QRCodePayload qrCodePayload) {
 		return getNoncesAndNotificationKey(qrCodePayload.toByteArray());
 	}
 
@@ -241,7 +244,7 @@ public class CryptoUtils {
 	public String generateEntryQrCode(String description, String address, byte[] countryData, long validFrom, long validTo,
 			byte[] masterPublicKey) {
 
-		ProtoV3.TraceLocation traceLocation = ProtoV3.TraceLocation.newBuilder()
+		TraceLocation traceLocation = TraceLocation.newBuilder()
 				.setVersion(QR_CODE_VERSION_3)
 				.setStartTimestamp(validFrom)
 				.setEndTimestamp(validTo)
@@ -249,13 +252,13 @@ public class CryptoUtils {
 				.setAddress(address)
 				.build();
 
-		ProtoV3.CrowdNotifierData crowdNotifierData = ProtoV3.CrowdNotifierData.newBuilder()
+		CrowdNotifierData crowdNotifierData = CrowdNotifierData.newBuilder()
 				.setVersion(QR_CODE_VERSION_3)
 				.setCryptographicSeed(ByteString.copyFrom(getRandomValue(CRYPTOGRAPHIC_SEED_BYTES)))
 				.setPublicKey(ByteString.copyFrom(masterPublicKey))
 				.build();
 
-		ProtoV3.QRCodePayload qrCodePayload = ProtoV3.QRCodePayload.newBuilder()
+		QRCodePayload qrCodePayload = QRCodePayload.newBuilder()
 				.setVersion(QR_CODE_VERSION_3)
 				.setCrowdNotifierData(crowdNotifierData)
 				.setLocationData(traceLocation)
