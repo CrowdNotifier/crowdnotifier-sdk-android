@@ -41,6 +41,7 @@ public class CryptoUtils {
 	private static final int NONCE_BYTES = 32;
 	private static final int CRYPTOGRAPHIC_SEED_BYTES = 32;
 
+	private static final int INTERVAL_LENGTH = 3600; //interval length seconds
 
 	private static CryptoUtils instance;
 	private SodiumAndroid sodium;
@@ -65,17 +66,15 @@ public class CryptoUtils {
 
 		ArrayList<IBECiphertext> ibeCiphertextsEntries = new ArrayList<>();
 
-		ArrayList<Integer> hourCounters = getAffectedHours(arrivalTime, departureTime);
-		for (Integer hour : hourCounters) {
+		ArrayList<Long> intervalStarts = getAffectedIntervalStarts(arrivalTime / 1000, departureTime / 1000);
+		for (Long intervalStart : intervalStarts) {
 
-			// getAffectedhours() generates hours since UNIX epoch. As the new format requires these to be in seconds since
-			// UNIX epoch, we multiply by 60 minutes * 60 seconds = 3600.
-			byte[] identity = generateIdentity(venueInfo.getQrCodePayload(), hour * 3600L, 3600);
+			byte[] identity = generateIdentity(venueInfo.getQrCodePayload(), intervalStart, INTERVAL_LENGTH);
 
 			byte[] message =
 					(new Gson().toJson(new Payload(arrivalTime, departureTime, venueInfo.getNotificationKey()))).getBytes();
 
-			ibeCiphertextsEntries.add(encryptInternal(masterPublicKey, identity, message, hour * 3600L));
+			ibeCiphertextsEntries.add(encryptInternal(masterPublicKey, identity, message, intervalStart));
 		}
 
 		return new EncryptedVenueVisit(ibeCiphertextsEntries);
@@ -210,15 +209,8 @@ public class CryptoUtils {
 	}
 
 	public ArrayList<byte[]> generateIdentities(VenueInfo venueInfo, long startTimestamp, long endTimestamp) {
-		ArrayList<Integer> hourCounters = getAffectedHours(startTimestamp, endTimestamp);
-		ArrayList<byte[]> identities = new ArrayList<>();
-		for (Integer hour : hourCounters) {
-			// getAffectedhours() generates hours since UNIX epoch. As the new format requires these to be in seconds since
-			// UNIX epoch, we multiply by 60 minutes * 60 seconds = 3600.
-			byte[] identity = generateIdentity(venueInfo.getQrCodePayload(), hour * 3600L, 3600);
-			identities.add(identity);
-		}
-		return identities;
+		//TODO: FIXME
+		return null;
 	}
 
 	public NoncesAndNotificationKey getNoncesAndNotificationKey(QRCodePayload qrCodePayload) {
@@ -319,16 +311,17 @@ public class CryptoUtils {
 	}
 
 	/**
-	 * @return a List of Integers containing all hours since UNIX epoch that intersect with the (arrivalTime, departureTime)
-	 * interval.
+	 * @param arrivalTime time since Unix Epoch in seconds
+	 * @param departureTime time since Unix Epoch in seconds
+	 * @return a List of Long containing all intervalStart values since UNIX epoch (in seconds) that intersect with the
+	 * (arrivalTime, departureTime) interval.
 	 */
-	public ArrayList<Integer> getAffectedHours(long arrivalTime, long departureTime) {
-		long ONE_HOUR_IN_MILLISECONDS = 1000L * 60 * 60;
-		long startHour = arrivalTime / ONE_HOUR_IN_MILLISECONDS;
-		long endHour = departureTime / ONE_HOUR_IN_MILLISECONDS;
-		ArrayList<Integer> result = new ArrayList<>();
-		for (int i = (int) startHour; i <= endHour; i++) {
-			result.add(i);
+	public ArrayList<Long> getAffectedIntervalStarts(long arrivalTime, long departureTime) {
+		long start = arrivalTime / INTERVAL_LENGTH;
+		long end = departureTime / INTERVAL_LENGTH;
+		ArrayList<Long> result = new ArrayList<>();
+		for (long i = start; i <= end; i += 1) {
+			result.add(i * INTERVAL_LENGTH);
 		}
 		return result;
 	}

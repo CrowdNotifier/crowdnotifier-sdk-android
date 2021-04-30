@@ -232,12 +232,10 @@ public class MatchingV3Tests {
 		CryptoUtils.NoncesAndNotificationKey cryptoData = cryptoUtils.getNoncesAndNotificationKey(qrCodePayload);
 
 		ArrayList<PreTraceWithProof> preTraceWithProofsList = new ArrayList<>();
-		ArrayList<Integer> affectedHours = cryptoUtils.getAffectedHours(startTime, endTime);
-		for (Integer hour : affectedHours) {
+		ArrayList<Long> intervalStarts = cryptoUtils.getAffectedIntervalStarts(startTime / 1000, endTime / 1000);
+		for (Long intervalStart : intervalStarts) {
 
-			long startOfInterval = hour * 3600;
-
-			byte[] identity = cryptoUtils.generateIdentity(qrCodePayload, startOfInterval, 3600);
+			byte[] identity = cryptoUtils.generateIdentity(qrCodePayload, intervalStart, 3600);
 
 			G1 partialSecretKeyForIdentityOfLocation = keyDer(masterSecretKeyLocation, identity);
 
@@ -261,7 +259,7 @@ public class MatchingV3Tests {
 					.setQrCodePayload(qrCodeTrace.getQrCodePayload())
 					.setStartTime(startTime)
 					.setEndTime(endTime)
-					.setStartOfInterval(startOfInterval)
+					.setStartOfInterval(intervalStart)
 					.build();
 			preTraceWithProofsList.add(preTraceWithProof);
 		}
