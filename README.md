@@ -31,11 +31,11 @@ You can find further information on the CrowdNotifier protocol in the [CrowdNoti
 
 ## Installation
 
-The SDK is available on JCenter and can be included directly as Gradle dependency:
+The SDK is available on Maven Central and can be included directly as Gradle dependency:
 
 ```groovy
 dependencies {
-  implementation 'org.crowdnotifier:crowdnotifier-sdk-android:1.1'
+  implementation 'org.crowdnotifier:crowdnotifier-sdk-android:4.0'
 }
 ```
 
@@ -62,6 +62,10 @@ CrowdNotifier.cleanUpOldData(getContext(), 10);
 
 // Remove an Exposure Event
 CrowdNotifier.removeExposure(getContext(), id);
+
+// Generate an Entry QR Code String
+CrowdNotifier.generateVenueInfo(...).toQrCodeString();
+
 ```
 
 ## Static methods of CrowdNotifier
@@ -78,6 +82,8 @@ checkForMatches | Given a set of published events with a known infected visitor,
 getExposureEvents | Returns all currently stored check ins that have previously matched a problematic event | `public static List<ExposureEvent> getExposureEvents(Context context)`
 cleanUpOldData | Removes all check ins that are older than the specified number of days | `public static void cleanUpOldData(Context context, int maxDaysToKeep)`
 removeExposure | Removes the exposure with the given ID | `public static void removeExposure(Context context, long exposureId)`
+generateVenueInfo | Generates a VenueInfo with the given properties. | `public static VenueInfo generateVenueInfo(String description, String address, byte[] countryData, long validFrom, long validTo, byte[] masterPublicKey)`
+generateUserUploadPayload | Generates an anonymised Venue Visit which can be used for Backward-Tracing in the Backend. | `public static UserUploadPayload generateUserUploadPayload(VenueInfo venueInfo, long startTimestamp, long endTimestamp)`
 
 ## Contributing
 
