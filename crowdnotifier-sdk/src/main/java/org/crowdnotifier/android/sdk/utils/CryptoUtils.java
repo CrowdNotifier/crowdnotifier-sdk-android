@@ -26,10 +26,7 @@ import com.herumi.mcl.GT;
 import com.herumi.mcl.Mcl;
 
 import org.crowdnotifier.android.sdk.model.*;
-import org.crowdnotifier.android.sdk.model.v3.AssociatedData;
-import org.crowdnotifier.android.sdk.model.v3.CrowdNotifierData;
-import org.crowdnotifier.android.sdk.model.v3.QRCodePayload;
-import org.crowdnotifier.android.sdk.model.v3.TraceLocation;
+import org.crowdnotifier.android.sdk.model.v3.*;
 
 import static org.crowdnotifier.android.sdk.utils.QrUtils.QR_CODE_VERSION_3;
 
@@ -205,21 +202,46 @@ public class CryptoUtils {
 		if (intervalLength < 900 || intervalLength > 86400) {
 			throw new RuntimeException("intervalLength must be between 900 and 86400");
 		}
-		NoncesAndNotificationKey cryptoData = getNoncesAndNotificationKey(qrCodePayload);
 
-		byte[] preid = crypto_hash_sha256(
+		PreIdAndTimeKey preIdAndTimeKey = getPreIdAndTimeKey(qrCodePayload, startOfInterval, intervalLength);
+
+		return crypto_hash_sha256(concatenate("CN-ID".getBytes(StandardCharsets.US_ASCII), preIdAndTimeKey.preId,
+				int32ToBytesBigEndian(intervalLength), int64ToBytesBigEndian(startOfInterval), preIdAndTimeKey.timeKey));
+	}
+
+	private PreIdAndTimeKey getPreIdAndTimeKey(byte[] qrCodePayload, long startOfInterval, int intervalLength) {
+		NoncesAndNotificationKey cryptoData = getNoncesAndNotificationKey(qrCodePayload);
+		byte[] preId = crypto_hash_sha256(
 				concatenate("CN-PREID".getBytes(StandardCharsets.US_ASCII), qrCodePayload, cryptoData.noncePreId));
 
 		byte[] timeKey = crypto_hash_sha256(concatenate("CN-TIMEKEY".getBytes(StandardCharsets.US_ASCII),
 				int32ToBytesBigEndian(intervalLength), int64ToBytesBigEndian(startOfInterval), cryptoData.nonceTimekey));
 
-		return crypto_hash_sha256(concatenate("CN-ID".getBytes(StandardCharsets.US_ASCII), preid,
-				int32ToBytesBigEndian(intervalLength), int64ToBytesBigEndian(startOfInterval), timeKey));
+		return new PreIdAndTimeKey(preId, timeKey);
 	}
 
-	public ArrayList<byte[]> generateIdentities(VenueInfo venueInfo, long startTimestamp, long endTimestamp) {
-		//TODO: FIXME
-		return null;
+
+	public UserUploadPayload generateUserUploadPayload(VenueInfo venueInfo, long startTimestamp, long endTimestamp) {
+
+		NoncesAndNotificationKey cryptoData = getNoncesAndNotificationKey(venueInfo.getQrCodePayload());
+		ArrayList<Long> intervalStarts = getAffectedIntervalStarts(startTimestamp / 1000, endTimestamp / 1000);
+		ArrayList<UploadVenueInfo> uploadVenueInfos = new ArrayList<>();
+		for (Long intervalStart : intervalStarts) {
+			PreIdAndTimeKey preIdAndTimeKey = getPreIdAndTimeKey(venueInfo.getQrCodePayload(), intervalStart, INTERVAL_LENGTH);
+
+			uploadVenueInfos.add(UploadVenueInfo.newBuilder()
+					.setPreId(ByteString.copyFrom(preIdAndTimeKey.preId))
+					.setTimeKey(ByteString.copyFrom(preIdAndTimeKey.timeKey))
+					.setIntervalStartMs(Math.max(intervalStart * 1000, startTimestamp))
+					.setIntervalEndMs(Math.min((intervalStart + INTERVAL_LENGTH) * 1000, endTimestamp))
+					.setNotificationKey(ByteString.copyFrom(cryptoData.notificationKey))
+					.build());
+		}
+
+		return UserUploadPayload.newBuilder()
+				.setVersion(QR_CODE_VERSION_3)
+				.addAllVenueInfos(uploadVenueInfos)
+				.build();
 	}
 
 	public NoncesAndNotificationKey getNoncesAndNotificationKey(QRCodePayload qrCodePayload) {
@@ -376,6 +398,18 @@ public class CryptoUtils {
 			this.noncePreId = noncePreId;
 			this.nonceTimekey = nonceTimekey;
 			this.notificationKey = notificationKey;
+		}
+
+	}
+
+
+	private class PreIdAndTimeKey {
+		public final byte[] preId;
+		public final byte[] timeKey;
+
+		public PreIdAndTimeKey(byte[] preId, byte[] timeKey) {
+			this.preId = preId;
+			this.timeKey = timeKey;
 		}
 
 	}

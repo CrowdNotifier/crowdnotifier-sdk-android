@@ -9,6 +9,7 @@ import org.crowdnotifier.android.sdk.model.EncryptedVenueVisit;
 import org.crowdnotifier.android.sdk.model.ExposureEvent;
 import org.crowdnotifier.android.sdk.model.ProblematicEventInfo;
 import org.crowdnotifier.android.sdk.model.VenueInfo;
+import org.crowdnotifier.android.sdk.model.v3.UserUploadPayload;
 import org.crowdnotifier.android.sdk.storage.ExposureStorage;
 import org.crowdnotifier.android.sdk.storage.VenueVisitStorage;
 import org.crowdnotifier.android.sdk.utils.CryptoUtils;
@@ -132,7 +133,7 @@ public class CrowdNotifier {
 	 * @param masterPublicKey The Master Public Key (as specified in the CrowdNotifier Protocol)
 	 * @return VenueInfo object
 	 */
-	public VenueInfo generateVenueInfo(String description, String address, byte[] countryData, long validFrom, long validTo,
+	public static VenueInfo generateVenueInfo(String description, String address, byte[] countryData, long validFrom, long validTo,
 			byte[] masterPublicKey) {
 		CryptoUtils crypto = CryptoUtils.getInstance();
 		return crypto.generateEntryQrCode(description, address, countryData, validFrom, validTo, masterPublicKey);
@@ -145,9 +146,9 @@ public class CrowdNotifier {
 	 * @param endTimestamp milliseconds since UTC Unix epoch
 	 * @return A List of identities for the given venueInfo, startTimestamp and endTimestamp
 	 */
-	public ArrayList<byte[]> generateIdentities(VenueInfo venueInfo, long startTimestamp, long endTimestamp) {
+	public static UserUploadPayload generateUserUploadPayload(VenueInfo venueInfo, long startTimestamp, long endTimestamp) {
 		CryptoUtils crypto = CryptoUtils.getInstance();
-		return crypto.generateIdentities(venueInfo, startTimestamp, endTimestamp);
+		return crypto.generateUserUploadPayload(venueInfo, startTimestamp, endTimestamp);
 	}
 
 }
