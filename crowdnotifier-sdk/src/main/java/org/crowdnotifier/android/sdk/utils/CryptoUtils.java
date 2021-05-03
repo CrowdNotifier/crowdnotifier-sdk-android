@@ -16,9 +16,9 @@ import com.google.crypto.tink.subtle.Hkdf;
 import com.google.gson.Gson;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.goterl.lazycode.lazysodium.LazySodiumAndroid;
-import com.goterl.lazycode.lazysodium.SodiumAndroid;
-import com.goterl.lazycode.lazysodium.interfaces.Box;
+import com.goterl.lazysodium.LazySodiumAndroid;
+import com.goterl.lazysodium.SodiumAndroid;
+import com.goterl.lazysodium.interfaces.Box;
 import com.herumi.mcl.Fr;
 import com.herumi.mcl.G1;
 import com.herumi.mcl.G2;
@@ -65,7 +65,7 @@ public class CryptoUtils {
 
 		ArrayList<IBECiphertext> ibeCiphertextsEntries = new ArrayList<>();
 
-		ArrayList<Long> intervalStarts = getAffectedIntervalStarts(arrivalTime / 1000, departureTime / 1000);
+		List<Long> intervalStarts = getAffectedIntervalStarts(arrivalTime / 1000, departureTime / 1000);
 		for (Long intervalStart : intervalStarts) {
 
 			byte[] identity = generateIdentity(venueInfo.getQrCodePayload(), intervalStart, INTERVAL_LENGTH);
@@ -224,7 +224,7 @@ public class CryptoUtils {
 	public UserUploadPayload generateUserUploadPayload(VenueInfo venueInfo, long startTimestamp, long endTimestamp) {
 
 		NoncesAndNotificationKey cryptoData = getNoncesAndNotificationKey(venueInfo.getQrCodePayload());
-		ArrayList<Long> intervalStarts = getAffectedIntervalStarts(startTimestamp / 1000, endTimestamp / 1000);
+		List<Long> intervalStarts = getAffectedIntervalStarts(startTimestamp / 1000, endTimestamp / 1000);
 		ArrayList<UploadVenueInfo> uploadVenueInfos = new ArrayList<>();
 		for (Long intervalStart : intervalStarts) {
 			PreIdAndTimeKey preIdAndTimeKey = getPreIdAndTimeKey(venueInfo.getQrCodePayload(), intervalStart, INTERVAL_LENGTH);
@@ -351,7 +351,7 @@ public class CryptoUtils {
 	 * @return a List of Long containing all intervalStart values since UNIX epoch (in seconds) that intersect with the
 	 * (arrivalTime, departureTime) interval.
 	 */
-	public ArrayList<Long> getAffectedIntervalStarts(long arrivalTime, long departureTime) {
+	public List<Long> getAffectedIntervalStarts(long arrivalTime, long departureTime) {
 		long start = arrivalTime / INTERVAL_LENGTH;
 		long end = departureTime / INTERVAL_LENGTH;
 		ArrayList<Long> result = new ArrayList<>();

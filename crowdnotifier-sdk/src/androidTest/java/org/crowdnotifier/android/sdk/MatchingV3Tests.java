@@ -10,9 +10,9 @@ import java.util.List;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.goterl.lazycode.lazysodium.LazySodiumAndroid;
-import com.goterl.lazycode.lazysodium.SodiumAndroid;
-import com.goterl.lazycode.lazysodium.interfaces.Box;
+import com.goterl.lazysodium.LazySodiumAndroid;
+import com.goterl.lazysodium.SodiumAndroid;
+import com.goterl.lazysodium.interfaces.Box;
 import com.herumi.mcl.Fr;
 import com.herumi.mcl.G1;
 import com.herumi.mcl.G2;
@@ -231,7 +231,7 @@ public class MatchingV3Tests {
 		CryptoUtils.NoncesAndNotificationKey cryptoData = cryptoUtils.getNoncesAndNotificationKey(qrCodePayload);
 
 		ArrayList<PreTraceWithProof> preTraceWithProofsList = new ArrayList<>();
-		ArrayList<Long> intervalStarts = cryptoUtils.getAffectedIntervalStarts(startTime / 1000, endTime / 1000);
+		List<Long> intervalStarts = cryptoUtils.getAffectedIntervalStarts(startTime / 1000, endTime / 1000);
 		for (Long intervalStart : intervalStarts) {
 
 			byte[] identity = cryptoUtils.generateIdentity(qrCodePayload, intervalStart, 3600);
