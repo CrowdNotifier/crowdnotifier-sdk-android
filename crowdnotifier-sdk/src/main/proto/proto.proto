@@ -1,5 +1,6 @@
 syntax = "proto3";
 package org.crowdnotifier.android.sdk.model.v3;
+option java_multiple_files = true;
 
 message QRCodeTrace {
   uint32 version = 1;
@@ -33,10 +34,9 @@ message PreTraceWithProof {
 message Trace {
   bytes identity = 1;
   bytes secretKeyForIdentity = 2;
-  int64 startTime = 3;
-  int64 endTime = 4;
-  bytes nonce = 5;
-  bytes encryptedAssociatedData = 6;
+  int64 startOfDayTimestamp = 3;
+  bytes nonce = 4;
+  bytes encryptedAssociatedData = 5;
 }
 
 message QRCodePayload {
@@ -72,29 +72,24 @@ message CrowdNotifierData {
   uint32 type = 4; // exact semantic tbd
 }
 
-
-message NotifyMeLocationData {
-  uint32 version = 1;
-  VenueType type = 2;
-  string room = 3;
-}
-
-enum VenueType {
-  OTHER = 0;
-  MEETING_ROOM = 1;
-  CAFETERIA = 2;
-  PRIVATE_EVENT = 3;
-  CANTEEN = 4;
-  LIBRARY = 5;
-  LECTURE_ROOM = 6;
-  SHOP = 7;
-  GYM = 8;
-  KITCHEN_AREA = 9;
-  OFFICE_SPACE = 10;
-}
-
 message AssociatedData {
   int32 version = 1;
   string message = 2;
-  bytes countryData = 3;
+  int64 startTimestamp = 3;
+  int64 endTimestamp = 4;
+  bytes countryData = 5;
 }
+
+message UserUploadPayload {
+  int32 version = 1;
+  repeated UploadVenueInfo venueInfos = 2;
+}
+message UploadVenueInfo {
+  bytes preId = 1;
+  bytes timeKey = 2;
+  int64 intervalStartMs = 3;
+  int64 intervalEndMs = 4;
+  bytes notificationKey = 5;
+  bool fake = 6;
+}
+
