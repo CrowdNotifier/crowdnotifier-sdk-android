@@ -51,7 +51,7 @@ public class QrUtils {
 		}
 	}
 
-	protected static VenueInfo getVenueInfoFromQrCode(String qrCodeString) throws InvalidQRCodeFormatException {
+	public static VenueInfo getVenueInfoFromQrCode(String qrCodeString) throws InvalidQRCodeFormatException {
 		try {
 			byte[] decoded = Base64Util.fromBase64(qrCodeString);
 			QRCodePayload qrCodeEntry = QRCodePayload.parseFrom(decoded);
