@@ -64,7 +64,7 @@ CrowdNotifier.cleanUpOldData(getContext(), 10);
 CrowdNotifier.removeExposure(getContext(), id);
 
 // Generate an Entry QR Code String
-CrowdNotifier.generateVenueInfo(...).toQrCodeString();
+CrowdNotifier.generateVenueInfo(...).toQrCodeString("https://example-base-url.org");
 
 ```
 

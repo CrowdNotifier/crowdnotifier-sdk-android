@@ -347,11 +347,12 @@ public class MatchingV3Tests {
 			Mcl.add(masterPublicKey, locationKeyPair.publicKey, haKeyPair.publicKey);
 
 			String qrEntryQRCodeBase64String = cryptoUtils.generateEntryQrCode(description, address, countryData, validFrom,
-					validTo, masterPublicKey.serialize()).toQrCodeString();
+					validTo, masterPublicKey.serialize()).toQrCodeString("prefix");
 
 			try {
-				this.qrCodePayload = QRCodePayload.parseFrom(Base64Util.fromBase64(qrEntryQRCodeBase64String));
-			} catch (InvalidProtocolBufferException e) {
+				this.qrCodePayload =
+						QRCodePayload.parseFrom(CrowdNotifier.getVenueInfo(qrEntryQRCodeBase64String, "prefix").getQrCodePayload());
+			} catch (InvalidProtocolBufferException | QrUtils.QRException e) {
 				throw new RuntimeException("Could not decode generated QRCodePayload");
 			}
 			byte[] cipherTextHealthAuthority = new byte[haKeyPair.privateKey.serialize().length + Box.SEALBYTES];
