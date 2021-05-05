@@ -221,27 +221,18 @@ public class CryptoUtils {
 	}
 
 
-	public UserUploadPayload generateUserUploadPayload(VenueInfo venueInfo, long startTimestamp, long endTimestamp) {
-
+	public List<UserUploadInfo> generateUserUploadPayload(VenueInfo venueInfo, long startTimestamp, long endTimestamp) {
 		NoncesAndNotificationKey cryptoData = getNoncesAndNotificationKey(venueInfo.getQrCodePayload());
 		List<Long> intervalStarts = getAffectedIntervalStarts(startTimestamp / 1000, endTimestamp / 1000);
-		ArrayList<UploadVenueInfo> uploadVenueInfos = new ArrayList<>();
+		ArrayList<UserUploadInfo> userUploadInfos = new ArrayList<>();
 		for (Long intervalStart : intervalStarts) {
 			PreIdAndTimeKey preIdAndTimeKey = getPreIdAndTimeKey(venueInfo.getQrCodePayload(), intervalStart, INTERVAL_LENGTH);
 
-			uploadVenueInfos.add(UploadVenueInfo.newBuilder()
-					.setPreId(ByteString.copyFrom(preIdAndTimeKey.preId))
-					.setTimeKey(ByteString.copyFrom(preIdAndTimeKey.timeKey))
-					.setIntervalStartMs(Math.max(intervalStart * 1000, startTimestamp))
-					.setIntervalEndMs(Math.min((intervalStart + INTERVAL_LENGTH) * 1000, endTimestamp))
-					.setNotificationKey(ByteString.copyFrom(cryptoData.notificationKey))
-					.build());
+			userUploadInfos.add(new UserUploadInfo(preIdAndTimeKey.preId, preIdAndTimeKey.timeKey, cryptoData.notificationKey,
+					Math.max(intervalStart * 1000, startTimestamp),
+					Math.min((intervalStart + INTERVAL_LENGTH) * 1000, endTimestamp)));
 		}
-
-		return UserUploadPayload.newBuilder()
-				.setVersion(QR_CODE_VERSION_3)
-				.addAllVenueInfos(uploadVenueInfos)
-				.build();
+		return userUploadInfos;
 	}
 
 	public NoncesAndNotificationKey getNoncesAndNotificationKey(QRCodePayload qrCodePayload) {

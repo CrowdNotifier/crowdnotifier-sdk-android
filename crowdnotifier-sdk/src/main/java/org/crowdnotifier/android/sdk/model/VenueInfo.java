@@ -13,7 +13,7 @@ public class VenueInfo {
 	private byte[] nonceTimekey;
 	private long validFrom;
 	private long validTo;
-	private byte[] qrCodePayload; // if null -> old CrowdNotifier QR Code Version (2)
+	private byte[] qrCodePayload;
 	private byte[] countryData;
 
 	public VenueInfo(String description, String address, byte[] notificationKey, byte[] publicKey, byte[] noncePreId,
