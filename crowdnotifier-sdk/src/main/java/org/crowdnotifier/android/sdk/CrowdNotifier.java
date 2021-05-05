@@ -8,8 +8,8 @@ import java.util.List;
 import org.crowdnotifier.android.sdk.model.EncryptedVenueVisit;
 import org.crowdnotifier.android.sdk.model.ExposureEvent;
 import org.crowdnotifier.android.sdk.model.ProblematicEventInfo;
+import org.crowdnotifier.android.sdk.model.UserUploadInfo;
 import org.crowdnotifier.android.sdk.model.VenueInfo;
-import org.crowdnotifier.android.sdk.model.v3.UserUploadPayload;
 import org.crowdnotifier.android.sdk.storage.ExposureStorage;
 import org.crowdnotifier.android.sdk.storage.VenueVisitStorage;
 import org.crowdnotifier.android.sdk.utils.CryptoUtils;
@@ -146,7 +146,7 @@ public class CrowdNotifier {
 	 * @param endTimestamp milliseconds since UTC Unix epoch
 	 * @return A List of identities for the given venueInfo, startTimestamp and endTimestamp
 	 */
-	public static UserUploadPayload generateUserUploadPayload(VenueInfo venueInfo, long startTimestamp, long endTimestamp) {
+	public static List<UserUploadInfo> generateUserUploadInfo(VenueInfo venueInfo, long startTimestamp, long endTimestamp) {
 		CryptoUtils crypto = CryptoUtils.getInstance();
 		return crypto.generateUserUploadPayload(venueInfo, startTimestamp, endTimestamp);
 	}
