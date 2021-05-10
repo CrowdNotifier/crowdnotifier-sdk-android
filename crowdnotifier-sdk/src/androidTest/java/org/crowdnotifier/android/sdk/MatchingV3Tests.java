@@ -281,14 +281,14 @@ public class MatchingV3Tests {
 		return new KeyPair(publicKey, privateKey);
 	}
 
-	private byte[] encryptAssociatedData(byte[] secretKey, String message, byte[] countryData, byte[] nonce, long startTimestamp,
-			long endTimestamp) {
+	private byte[] encryptAssociatedData(byte[] secretKey, String message, byte[] countryData, byte[] nonce, long startTimestampMs,
+			long endTimestampMs) {
 		AssociatedData associatedData = AssociatedData.newBuilder()
 				.setMessage(message)
 				.setCountryData(ByteString.copyFrom(countryData))
 				.setVersion(QR_CODE_VERSION)
-				.setStartTimestamp(startTimestamp)
-				.setEndTimestamp(endTimestamp)
+				.setStartTimestampSeconds(startTimestampMs / 1000L)
+				.setEndTimestampSeconds(endTimestampMs / 1000L)
 				.build();
 
 		byte[] messageBytes = associatedData.toByteArray();

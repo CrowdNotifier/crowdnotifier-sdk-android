@@ -100,9 +100,8 @@ public class CryptoUtils {
 
 				Payload payload = new Gson().fromJson(new String(msg_p), Payload.class);
 
-				byte[] decryptedMessage =
-						crypto_secretbox_open_easy(payload.getNotificationKey(), eventInfo.getEncryptedAssociatedData(),
-								eventInfo.getCipherTextNonce());
+				byte[] decryptedMessage = crypto_secretbox_open_easy(payload.getNotificationKey(),
+						eventInfo.getEncryptedAssociatedData(), eventInfo.getCipherTextNonce());
 
 				String decryptedMessageString;
 				byte[] countryData;
@@ -116,8 +115,8 @@ public class CryptoUtils {
 					break;
 				}
 
-				if (doIntersect(payload.getArrivalTime(), payload.getDepartureTime(), associatedData.getStartTimestamp(),
-						associatedData.getEndTimestamp())) {
+				if (doIntersect(payload.getArrivalTime(), payload.getDepartureTime(),
+						associatedData.getStartTimestampSeconds() * 1000L, associatedData.getEndTimestampSeconds() * 1000L)) {
 					ExposureEvent exposureEvent = new ExposureEvent(venueVisit.getId(), payload.getArrivalTime(),
 							payload.getDepartureTime(), decryptedMessageString, countryData);
 

@@ -49,18 +49,10 @@ message QRCodePayload {
 
 message TraceLocation {
   uint32 version = 1;
-
-  // max. 100 characters
-  string description = 2;
-
-  // max. 100 characters
-  string address = 3;
-
-  // UNIX timestamp (in seconds)
-  uint64 startTimestamp = 4;
-
-  // UNIX timestamp (in seconds)
-  uint64 endTimestamp = 5;
+  string description = 2; // max. 100 characters
+  string address = 3; // max. 100 characters
+  uint64 startTimestamp = 4; // UNIX timestamp (in seconds)
+  uint64 endTimestamp = 5; // UNIX timestamp (in seconds)
 }
 
 message CrowdNotifierData {
@@ -75,8 +67,8 @@ message CrowdNotifierData {
 message AssociatedData {
   int32 version = 1;
   string message = 2;
-  int64 startTimestamp = 3;
-  int64 endTimestamp = 4;
+  int64 startTimestampSeconds = 3;
+  int64 endTimestampSeconds = 4;
   bytes countryData = 5;
 }
 
