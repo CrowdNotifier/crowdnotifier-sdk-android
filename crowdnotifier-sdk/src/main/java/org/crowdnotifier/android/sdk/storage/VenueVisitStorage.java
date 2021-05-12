@@ -76,6 +76,14 @@ public class VenueVisitStorage {
 		return true;
 	}
 
+	public boolean deleteEntry(long id) {
+		List<EncryptedVenueVisit> venueVisitList = getEntries();
+		EncryptedVenueVisit oldEntry = getVenueVisitWithId(venueVisitList, id);
+		if (oldEntry == null) return false;
+		venueVisitList.remove(oldEntry);
+		saveToPrefs(venueVisitList);
+		return true;
+	}
 
 	public List<EncryptedVenueVisit> getEntries() {
 		return gson.fromJson(sharedPreferences.getString(KEY_VENUE_VISITS, "[]"), VENUE_LIST_TYPE);

@@ -69,6 +69,17 @@ public class CrowdNotifier {
 	}
 
 	/**
+	 * Deletes a previously stored VenueVisit in EncryptedSharedPreferences.
+	 * @param id the ID of the stored VenueVisit that should be updated (the ID is returned by CrowdNotifier.addCheckIn(...)
+	 * @param context Android Context
+	 * @return true if the deletion was successful (i.e. an encrypted Venue Visit with the provided id was found and deleted),
+	 * false otherwise.
+	 */
+	public static boolean deleteCheckIn(long id, Context context) {
+		return VenueVisitStorage.getInstance(context).deleteEntry(id);
+	}
+
+	/**
 	 * Checks whether any stored encrypted VenueVisit matches with a ProblematicEventInfo. A match means, that the the stored
 	 * encrypted VenueVisit could be decrypted using the provided secretKeyForIdentity and identity inside the
 	 * {@link ProblematicEventInfo}, and additionally the time intervals of the VenueVisit and the ProblematicEventInfo overlap.
