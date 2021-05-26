@@ -116,7 +116,7 @@ public class CrowdNotifier {
 	}
 
 	/**
-	 * Deletes all ExposureEvents that are older than maxDaysToKeep days.
+	 * Deletes all ExposureEvents and Check-Ins that are older than maxDaysToKeep days.
 	 * @param context Android Context
 	 * @param maxDaysToKeep How many days the events are kept
 	 */
@@ -151,7 +151,8 @@ public class CrowdNotifier {
 	}
 
 	/**
-	 * Generates all identities for a given VenueInfo and start and end Timestamps
+	 * Generates a List of UserUploadInfo objects for a given VenueInfo and start and end timestamps. The UserUploadInfo objects
+	 * can be used for Trace Key Generation as well as Backward Tracing in the Backend.
 	 * @param venueInfo information of the location extracted from the QR Code by calling CrowdNotifier.getVenueInfo(...)
 	 * @param startTimestamp milliseconds since UTC Unix epoch
 	 * @param endTimestamp milliseconds since UTC Unix epoch

@@ -39,6 +39,8 @@ dependencies {
 }
 ```
 
+ATTENTION: Version 4.0 of the SDK is not backwards compatible with earlier versions!
+
 ## Using the SDK
 
 ```java
@@ -67,7 +69,7 @@ CrowdNotifier.cleanUpOldData(getContext(), 10);
 CrowdNotifier.removeExposure(getContext(), id);
 
 // Generate an Entry QR Code String
-CrowdNotifier.generateVenueInfo(...).toQrCodeString("https://example-base-url.org");
+String entryQrCode = CrowdNotifier.generateVenueInfo(...).toQrCodeString("https://example-base-url.org");
 
 ```
 

@@ -152,8 +152,7 @@ public class MatchingV3Tests {
 		CrowdNotifier.addCheckIn(arrivalTime, departureTime, venueInfo, context);
 
 		//Venue Owner Creates PreTraces
-		List<PreTraceWithProof> preTraceWithProofList =
-				createPreTrace(qrTrace, exposureStart, exposureEnd);
+		List<PreTraceWithProof> preTraceWithProofList = createPreTrace(qrTrace, exposureStart, exposureEnd);
 
 		//Health Authority generates Traces
 		List<ProblematicEventInfo> publishedSKs = new ArrayList<>();
