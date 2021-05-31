@@ -26,9 +26,9 @@ import com.herumi.mcl.GT;
 import com.herumi.mcl.Mcl;
 
 import org.crowdnotifier.android.sdk.model.*;
-import org.crowdnotifier.android.sdk.model.v3.*;
+import org.crowdnotifier.android.sdk.model.*;
 
-import static org.crowdnotifier.android.sdk.utils.QrUtils.QR_CODE_VERSION_3;
+import static org.crowdnotifier.android.sdk.utils.QrUtils.QR_CODE_VERSION;
 
 /**
  * This class contains all cryptographic calculations, such as encrypting VenueVisits or matching stored encrypted VenueVisits with
@@ -258,7 +258,7 @@ public class CryptoUtils {
 			byte[] masterPublicKey) {
 
 		TraceLocation traceLocation = TraceLocation.newBuilder()
-				.setVersion(QR_CODE_VERSION_3)
+				.setVersion(QR_CODE_VERSION)
 				.setStartTimestamp(validFrom)
 				.setEndTimestamp(validTo)
 				.setDescription(description)
@@ -266,13 +266,13 @@ public class CryptoUtils {
 				.build();
 
 		CrowdNotifierData crowdNotifierData = CrowdNotifierData.newBuilder()
-				.setVersion(QR_CODE_VERSION_3)
+				.setVersion(QR_CODE_VERSION)
 				.setCryptographicSeed(ByteString.copyFrom(getRandomValue(CRYPTOGRAPHIC_SEED_BYTES)))
 				.setPublicKey(ByteString.copyFrom(masterPublicKey))
 				.build();
 
 		QRCodePayload qrCodePayload = QRCodePayload.newBuilder()
-				.setVersion(QR_CODE_VERSION_3)
+				.setVersion(QR_CODE_VERSION)
 				.setCrowdNotifierData(crowdNotifierData)
 				.setLocationData(traceLocation)
 				.setCountryData(ByteString.copyFrom(countryData))

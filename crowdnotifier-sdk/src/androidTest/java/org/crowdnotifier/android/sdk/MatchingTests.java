@@ -19,7 +19,6 @@ import com.herumi.mcl.G2;
 import com.herumi.mcl.Mcl;
 
 import org.crowdnotifier.android.sdk.model.*;
-import org.crowdnotifier.android.sdk.model.v3.*;
 import org.crowdnotifier.android.sdk.storage.ExposureStorage;
 import org.crowdnotifier.android.sdk.storage.VenueVisitStorage;
 import org.crowdnotifier.android.sdk.utils.Base64Util;
@@ -37,7 +36,7 @@ import static org.junit.Assert.assertEquals;
  * computations that are normally done in the Backend.
  */
 @RunWith(AndroidJUnit4.class)
-public class MatchingV3Tests {
+public class MatchingTests {
 
 	private Context context;
 	private SodiumAndroid sodium;
@@ -45,7 +44,7 @@ public class MatchingV3Tests {
 	KeyPair haKeyPair;
 	private static final long ONE_HOUR_IN_SECONDS = 60 * 60;
 	private static final long ONE_DAY_IN_SECONDS = 24 * ONE_HOUR_IN_SECONDS;
-	private static final int QR_CODE_VERSION = 3;
+	private static final int QR_CODE_VERSION = 4;
 
 
 	/**

@@ -2,7 +2,7 @@ package org.crowdnotifier.android.sdk.model;
 
 import org.crowdnotifier.android.sdk.utils.Base64Util;
 
-import static org.crowdnotifier.android.sdk.utils.QrUtils.QR_CODE_VERSION_3;
+import static org.crowdnotifier.android.sdk.utils.QrUtils.QR_CODE_VERSION;
 
 public class VenueInfo {
 	private String description;
@@ -76,7 +76,7 @@ public class VenueInfo {
 	}
 
 	public String toQrCodeString(String prefix) {
-		return prefix + "?v=" + QR_CODE_VERSION_3 + "#" + Base64Util.toBase64(qrCodePayload);
+		return prefix + "?v=" + QR_CODE_VERSION + "#" + Base64Util.toBase64(qrCodePayload);
 	}
 
 }

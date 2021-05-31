@@ -3,9 +3,9 @@ package org.crowdnotifier.android.sdk.utils;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.crowdnotifier.android.sdk.model.VenueInfo;
-import org.crowdnotifier.android.sdk.model.v3.CrowdNotifierData;
-import org.crowdnotifier.android.sdk.model.v3.QRCodePayload;
-import org.crowdnotifier.android.sdk.model.v3.TraceLocation;
+import org.crowdnotifier.android.sdk.model.CrowdNotifierData;
+import org.crowdnotifier.android.sdk.model.QRCodePayload;
+import org.crowdnotifier.android.sdk.model.TraceLocation;
 
 /**
  * This class extracts the VenueInfo object from a provided QR Code URL in its only public function getQrInfo(...). It performs
@@ -14,7 +14,7 @@ import org.crowdnotifier.android.sdk.model.v3.TraceLocation;
  */
 public class QrUtils {
 
-	public static final int QR_CODE_VERSION_3 = 3;
+	public static final int QR_CODE_VERSION = 4;
 
 	public static VenueInfo getQrInfo(String qrCodeString, String expectedQrCodePrefix) throws QRException {
 
@@ -26,7 +26,7 @@ public class QrUtils {
 		String version = urlSplits[1];
 		if (!urlPrefix.equals(expectedQrCodePrefix)) throw new InvalidQRCodeFormatException();
 
-		if (String.valueOf(QR_CODE_VERSION_3).equals(version)) {
+		if (String.valueOf(QR_CODE_VERSION).equals(version)) {
 			checkQrCodeValidity(fragmentSplit[1]);
 			return getVenueInfoFromQrCode(fragmentSplit[1]);
 		} else {
