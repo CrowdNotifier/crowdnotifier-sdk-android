@@ -93,7 +93,7 @@ public class MatchingTests {
 				generateVisitAndExposure(arrivalTime, departureTime, exposureStart, exposureEnd, exposureMessage, countryData);
 
 		//User matches Traces with VenueVisits stored in App
-		List<ExposureEvent> exposureEvents = CrowdNotifier.checkForMatches(publishedSKs, context);
+		List<ExposureEvent> exposureEvents = CrowdNotifier.checkForMatches(publishedSKs, 0, context);
 
 		//Final Checks
 		assertEquals(1, exposureEvents.size());
@@ -123,7 +123,7 @@ public class MatchingTests {
 				generateVisitAndExposure(arrivalTime, departureTime, exposureStart, exposureEnd, exposureMessage, countryData);
 
 		//User matches Traces with VenueVisits stored in App
-		List<ExposureEvent> exposureEvents = CrowdNotifier.checkForMatches(publishedSKs, context);
+		List<ExposureEvent> exposureEvents = CrowdNotifier.checkForMatches(publishedSKs, 0, context);
 
 		//Final Check
 		assertEquals(0, exposureEvents.size());

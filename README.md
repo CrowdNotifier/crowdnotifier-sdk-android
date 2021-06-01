@@ -57,7 +57,7 @@ CrowdNotifier.updateCheckIn(id, arrivalTime, departureTime, venueInfo, getContex
 CrowdNotifier.deleteCheckIn(id, getContext());
 
 // Match published SKs against stored encrypted venue visits
-List<ExposureEvent> newExposures = CrowdNotifier.checkForMatches(publishedSKs, getContext());
+List<ExposureEvent> newExposures = CrowdNotifier.checkForMatches(publishedSKs, 0, getContext());
 
 // Get all exposureEvents
 List<ExposureEvent> allExposures = CrowdNotifier.getExposureEvents(getContext());
@@ -84,7 +84,7 @@ getVenueInfo | Returns information about the data contained in a QR code, or nul
 addCheckin | Stores a check in given arrival time, departure time and a VenueInfo object. Returns the id of the stored entry. | `public static long addCheckIn(long arrivalTime, long departureTime, VenueInfo venueInfo, Context context)`
 updateCheckin | Updates a checkin that has previously been stored | `public static boolean updateCheckIn(long id, long arrivalTime, long departureTime, VenueInfo venueInfo, Context context)`
 deleteCheckin | Deletes a checkin that has previously been stored | `public static boolean deleteCheckIn(long id, Context context)`
-checkForMatches | Given a set of published events with a known infected visitor, stores and returns those locally stored check ins that overlap with one of the problematic events | `public static List<ExposureEvent> checkForMatches(List<ProblematicEventInfo> publishedSKs, Context context)`
+checkForMatches | Given a set of published events with a known infected visitor, stores and returns those locally stored check ins that overlap with one of the problematic events | `public static List<ExposureEvent> checkForMatches(List<ProblematicEventInfo> publishedSKs, long minOverlap, Context context)`
 getExposureEvents | Returns all currently stored check ins that have previously matched a problematic event | `public static List<ExposureEvent> getExposureEvents(Context context)`
 cleanUpOldData | Removes all check ins that are older than the specified number of days | `public static void cleanUpOldData(Context context, int maxDaysToKeep)`
 removeExposure | Removes the exposure with the given ID | `public static void removeExposure(Context context, long exposureId)`

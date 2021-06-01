@@ -79,7 +79,8 @@ public class CryptoUtils {
 		return new EncryptedVenueVisit(ibeCiphertextsEntries);
 	}
 
-	public List<ExposureEvent> searchAndDecryptMatches(ProblematicEventInfo eventInfo, List<EncryptedVenueVisit> venueVisits) {
+	public List<ExposureEvent> searchAndDecryptMatches(ProblematicEventInfo eventInfo, List<EncryptedVenueVisit> venueVisits,
+			long minOverlap) {
 
 		List<ExposureEvent> exposureEvents = new ArrayList<>();
 
@@ -93,7 +94,7 @@ public class CryptoUtils {
 				long endOfDayLocalEntry = ibeCiphertext.getDayDate().getNextDay().getStartOfDayTimestamp();
 				long startOfDayEventInfo = eventInfo.getDayDate().getStartOfDayTimestamp();
 				long endOfDay1EventInfo = eventInfo.getDayDate().getNextDay().getStartOfDayTimestamp();
-				if (!doIntersect(startOfDayLocalEntry, endOfDayLocalEntry, startOfDayEventInfo, endOfDay1EventInfo)) continue;
+				if (!doIntersect(startOfDayLocalEntry, endOfDayLocalEntry, startOfDayEventInfo, endOfDay1EventInfo, 0)) continue;
 
 				byte[] msg_p = decryptInternal(ibeCiphertext, secretKeyForIdentity, eventInfo.getIdentity());
 				if (msg_p == null) continue;
@@ -116,7 +117,8 @@ public class CryptoUtils {
 				}
 
 				if (doIntersect(payload.getArrivalTime(), payload.getDepartureTime(),
-						associatedData.getStartTimestampSeconds() * 1000L, associatedData.getEndTimestampSeconds() * 1000L)) {
+						associatedData.getStartTimestampSeconds() * 1000L, associatedData.getEndTimestampSeconds() * 1000L,
+						minOverlap)) {
 					ExposureEvent exposureEvent = new ExposureEvent(venueVisit.getId(), payload.getArrivalTime(),
 							payload.getDepartureTime(), decryptedMessageString, countryData);
 
@@ -128,8 +130,9 @@ public class CryptoUtils {
 		return exposureEvents;
 	}
 
-	private boolean doIntersect(long startTime1, long endTime1, long startTime2, long endTime2) {
-		return startTime1 <= endTime2 && endTime1 >= startTime2;
+	public boolean doIntersect(long startTime1, long endTime1, long startTime2, long endTime2, long minOverlap) {
+		return startTime1 <= endTime2 && endTime1 >= startTime2 &&
+				Math.max(startTime1, startTime2) + minOverlap <= Math.min(endTime1, endTime2);
 	}
 
 	public byte[] decryptInternal(IBECiphertext ibeCiphertext, G1 secretKeyForIdentity, byte[] identity) {

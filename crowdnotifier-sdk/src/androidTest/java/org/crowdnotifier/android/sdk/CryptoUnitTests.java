@@ -67,4 +67,18 @@ public class CryptoUnitTests {
 		}
 	}
 
+	/**
+	 * Tests doIntersect function
+	 */
+	@Test
+	public void testDoIntersect() {
+
+		assertTrue(cryptoUtils.doIntersect(1,3,2,4,1));
+		assertFalse(cryptoUtils.doIntersect(1,3,3,4,1));
+		assertTrue(cryptoUtils.doIntersect(1,3,3,4,0));
+		assertTrue(cryptoUtils.doIntersect(2,4,1,3,1));
+		assertFalse(cryptoUtils.doIntersect(3,4,1,3,1));
+		assertTrue(cryptoUtils.doIntersect(3,4,1,3,0));
+	}
+
 }

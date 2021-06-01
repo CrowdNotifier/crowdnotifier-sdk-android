@@ -84,11 +84,12 @@ public class CrowdNotifier {
 	 * encrypted VenueVisit could be decrypted using the provided secretKeyForIdentity and identity inside the
 	 * {@link ProblematicEventInfo}, and additionally the time intervals of the VenueVisit and the ProblematicEventInfo overlap.
 	 * @param publishedSKs A List of ProblematicEventInfo objects, that were published by the Health Authority.
+	 * @param minOverlap The minimal overlap (in ms) a ProblematicEventInfo needs to have with a Check-In to trigger an Exposure
 	 * @param context Android Context
 	 * @return A list containing all {@link ExposureEvent} objects that matched with at least one of the provided
 	 * ProblematicEventInfo's
 	 */
-	public static List<ExposureEvent> checkForMatches(List<ProblematicEventInfo> publishedSKs, Context context) {
+	public static List<ExposureEvent> checkForMatches(List<ProblematicEventInfo> publishedSKs, long minOverlap, Context context) {
 
 		ArrayList<ExposureEvent> newExposureEvents = new ArrayList<>();
 		ExposureStorage exposureStorage = ExposureStorage.getInstance(context);
@@ -96,7 +97,7 @@ public class CrowdNotifier {
 		for (ProblematicEventInfo problematicEventInfo : publishedSKs) {
 
 			List<ExposureEvent> matches = CryptoUtils.getInstance()
-					.searchAndDecryptMatches(problematicEventInfo, VenueVisitStorage.getInstance(context).getEntries());
+					.searchAndDecryptMatches(problematicEventInfo, VenueVisitStorage.getInstance(context).getEntries(), minOverlap);
 
 			for (ExposureEvent match : matches) {
 				boolean added = exposureStorage.addEntry(match);
