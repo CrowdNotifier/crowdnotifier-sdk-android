@@ -20,17 +20,16 @@ public class CrowdNotifier {
 	/**
 	 * Given an qrCode String, this function tries to extract a VenueInfo object from it. The qrCode String should be of the
 	 * following format: <prefix>?v=<qr-code-version>#<base64-encoded-protobuf>
-	 * e.g. https://qr.notify-me.ch?v=3#<base64-encoded-protobuf>
+	 * e.g. https://qr.example.org?v=3#<base64-encoded-protobuf>
 	 * <p>
-	 * Set the expectedQrCodePrefix parameter to the <prefix> part of the qrCode String.
 	 * @param qrCode base64 representation of the scanned code of the following format:
 	 * <prefix>?v=<qr-code-version>#<base64-encoded-protobuf>
-	 * @param expectedQrCodePrefix the prefix part of the url before the "?v=<qr-code-version>#<base64-encoded-protobuf>" you
-	 * would accept as valid QR code
+	 * @param host the prefix part of the url before the "?v=<qr-code-version>#<base64-encoded-protobuf>" you
+	 * would accept as valid QR code. e.g. "qr.example.org"
 	 * @return A {@link VenueInfo} if the input qrCode was a valid qrCode, null otherwise.
 	 */
-	public static VenueInfo getVenueInfo(String qrCode, String expectedQrCodePrefix) throws QrUtils.QRException {
-		return QrUtils.getQrInfo(qrCode, expectedQrCodePrefix);
+	public static VenueInfo getVenueInfo(String qrCode, String host) throws QrUtils.QRException {
+		return QrUtils.getQrInfo(qrCode, host);
 	}
 
 

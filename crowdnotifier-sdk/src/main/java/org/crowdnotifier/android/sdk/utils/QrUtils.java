@@ -1,5 +1,7 @@
 package org.crowdnotifier.android.sdk.utils;
 
+import android.net.Uri;
+
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.crowdnotifier.android.sdk.model.VenueInfo;
@@ -16,22 +18,20 @@ public class QrUtils {
 
 	public static final int QR_CODE_VERSION = 4;
 
-	public static VenueInfo getQrInfo(String qrCodeString, String expectedQrCodePrefix) throws QRException {
+	public static VenueInfo getQrInfo(String qrCodeString, String host) throws QRException {
 
-		String[] fragmentSplit = qrCodeString.split("#");
-		if (fragmentSplit.length != 2) throw new InvalidQRCodeFormatException();
-		String[] urlSplits = fragmentSplit[0].split("\\?v=");
-		if (urlSplits.length != 2) throw new InvalidQRCodeFormatException();
-		String urlPrefix = urlSplits[0];
-		String version = urlSplits[1];
-		if (!urlPrefix.equals(expectedQrCodePrefix)) throw new InvalidQRCodeFormatException();
-
-		if (String.valueOf(QR_CODE_VERSION).equals(version)) {
-			checkQrCodeValidity(fragmentSplit[1]);
-			return getVenueInfoFromQrCode(fragmentSplit[1]);
-		} else {
-			throw new InvalidQRCodeVersionException();
+		if(!qrCodeString.startsWith("http")){
+			qrCodeString = "https://" + qrCodeString;
 		}
+		Uri uri = Uri.parse(qrCodeString);
+		if (!host.equals(uri.getHost())) throw new InvalidQRCodeFormatException();
+		String version = uri.getQueryParameter("v");
+		if (!String.valueOf(QR_CODE_VERSION).equals(version)) throw new InvalidQRCodeVersionException();
+
+		String fragment = uri.getFragment();
+		if (fragment == null) throw new InvalidQRCodeFormatException();
+		checkQrCodeValidity(fragment);
+		return getVenueInfoFromQrCode(fragment);
 	}
 
 	private static void checkQrCodeValidity(String qrCodeString) throws QRException {

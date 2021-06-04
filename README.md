@@ -45,7 +45,7 @@ ATTENTION: Version 4.0 of the SDK is not backwards compatible with earlier versi
 
 ```java
 // Get VenueInfo
-VenueInfo venueInfo = CrowdNotifier.getVenueInfo(qrCode, prefix);
+VenueInfo venueInfo = CrowdNotifier.getVenueInfo(qrCode, host);
 
 // Store a Check-In
 long id = CrowdNotifier.addCheckIn(arrivalTime, departureTime, venueInfo, getContext());
@@ -80,7 +80,7 @@ be handled by the app itself.
 
 Name | Description | Function Name
 ---- | ----------- | -------------
-getVenueInfo | Returns information about the data contained in a QR code, or null if the QR code does not have a valid format | `public static VenueInfo getVenueInfo(String qrCode, String expectedQrCodePrefix)`
+getVenueInfo | Returns information about the data contained in a QR code, or null if the QR code does not have a valid format | `public static VenueInfo getVenueInfo(String qrCode, String host)`
 addCheckin | Stores a check in given arrival time, departure time and a VenueInfo object. Returns the id of the stored entry. | `public static long addCheckIn(long arrivalTime, long departureTime, VenueInfo venueInfo, Context context)`
 updateCheckin | Updates a checkin that has previously been stored | `public static boolean updateCheckIn(long id, long arrivalTime, long departureTime, VenueInfo venueInfo, Context context)`
 deleteCheckin | Deletes a checkin that has previously been stored | `public static boolean deleteCheckIn(long id, Context context)`
