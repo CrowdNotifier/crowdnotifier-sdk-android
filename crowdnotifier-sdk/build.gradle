@@ -71,7 +71,7 @@ sonarqube {
 
 dependencies {
 
-	implementation 'androidx.security:security-crypto:1.0.0-rc03'
+	implementation 'androidx.security:security-crypto:1.0.0'
 
 	implementation 'com.google.code.gson:gson:2.8.6'
 	implementation 'com.google.protobuf:protobuf-lite:3.0.1'

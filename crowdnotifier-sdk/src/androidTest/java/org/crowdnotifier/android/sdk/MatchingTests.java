@@ -145,8 +145,9 @@ public class MatchingTests {
 
 		//User checks in with App
 		String urlPrefix = "https://test.com";
+		String host = "test.com";
 		VenueInfo venueInfo = CrowdNotifier.getVenueInfo(urlPrefix + "?v=" + QR_CODE_VERSION + "#"
-				+ Base64Util.toBase64(qrEntry.toByteArray()), urlPrefix);
+				+ Base64Util.toBase64(qrEntry.toByteArray()), host);
 
 		CrowdNotifier.addCheckIn(arrivalTime, departureTime, venueInfo, context);
 
@@ -345,11 +346,11 @@ public class MatchingTests {
 			Mcl.add(masterPublicKey, locationKeyPair.publicKey, haKeyPair.publicKey);
 
 			String qrEntryQRCodeBase64String = cryptoUtils.generateEntryQrCode(description, address, countryData, validFrom,
-					validTo, masterPublicKey.serialize()).toQrCodeString("prefix");
+					validTo, masterPublicKey.serialize()).toQrCodeString("test.com");
 
 			try {
 				this.qrCodePayload =
-						QRCodePayload.parseFrom(CrowdNotifier.getVenueInfo(qrEntryQRCodeBase64String, "prefix").getQrCodePayload());
+						QRCodePayload.parseFrom(CrowdNotifier.getVenueInfo(qrEntryQRCodeBase64String, "test.com").getQrCodePayload());
 			} catch (InvalidProtocolBufferException | QrUtils.QRException e) {
 				throw new RuntimeException("Could not decode generated QRCodePayload");
 			}
