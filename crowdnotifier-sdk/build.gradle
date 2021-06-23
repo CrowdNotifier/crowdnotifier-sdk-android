@@ -57,6 +57,7 @@ android {
 
 mavenPublish {
 	androidVariantToPublish = PUBLISH_VARIANT
+	releaseSigningEnabled = true // set this to false for local maven publishing
 }
 
 sonarqube {
@@ -70,12 +71,12 @@ sonarqube {
 
 dependencies {
 
-	implementation 'androidx.security:security-crypto:1.0.0-rc03'
+	implementation 'androidx.security:security-crypto:1.0.0'
 
 	implementation 'com.google.code.gson:gson:2.8.6'
 	implementation 'com.google.protobuf:protobuf-lite:3.0.1'
 
-	implementation "com.goterl.lazycode:lazysodium-android:4.2.0@aar"
+	implementation "com.goterl:lazysodium-android:5.0.2@aar"
 	implementation "net.java.dev.jna:jna:5.6.0@aar"
 	implementation 'ch.ubique.mcl:mcl-android:0.6'
 	implementation 'com.google.crypto.tink:tink-android:1.5.0'

@@ -17,6 +17,7 @@ import com.google.gson.reflect.TypeToken;
 
 import org.crowdnotifier.android.sdk.model.DayDate;
 import org.crowdnotifier.android.sdk.model.EncryptedVenueVisit;
+import org.crowdnotifier.android.sdk.model.IBECiphertext;
 
 /**
  * This class stores all encrypted VenueVisits to EncryptedSharedPreferences.
@@ -24,7 +25,7 @@ import org.crowdnotifier.android.sdk.model.EncryptedVenueVisit;
 public class VenueVisitStorage {
 
 	private static final String KEY_CROWDNOTIFIER_STORE = "KEY_CROWDNOTIFIER_STORE";
-	private static final String KEY_VENUE_VISITS = "KEY_VENUE_VISITS_V2";
+	private static final String KEY_VENUE_VISITS = "KEY_VENUE_VISITS";
 	private static final Type VENUE_LIST_TYPE = new TypeToken<ArrayList<EncryptedVenueVisit>>() { }.getType();
 
 	private static VenueVisitStorage instance;
@@ -75,6 +76,14 @@ public class VenueVisitStorage {
 		return true;
 	}
 
+	public boolean deleteEntry(long id) {
+		List<EncryptedVenueVisit> venueVisitList = getEntries();
+		EncryptedVenueVisit oldEntry = getVenueVisitWithId(venueVisitList, id);
+		if (oldEntry == null) return false;
+		venueVisitList.remove(oldEntry);
+		saveToPrefs(venueVisitList);
+		return true;
+	}
 
 	public List<EncryptedVenueVisit> getEntries() {
 		return gson.fromJson(sharedPreferences.getString(KEY_VENUE_VISITS, "[]"), VENUE_LIST_TYPE);
@@ -82,10 +91,17 @@ public class VenueVisitStorage {
 
 	public void removeEntriesBefore(int maxDaysToKeep) {
 		List<EncryptedVenueVisit> venueVisitList = getEntries();
-		DayDate lastDateToKeep = new DayDate().subtractDays(maxDaysToKeep);
+		DayDate oldestDateToKeep = new DayDate().subtractDays(maxDaysToKeep);
 		Iterator<EncryptedVenueVisit> iterator = venueVisitList.iterator();
 		while (iterator.hasNext()) {
-			if (iterator.next().getDayDate().isBefore(lastDateToKeep)) {
+			boolean shouldDelete = true;
+			for (IBECiphertext ibeCiphertext : iterator.next().getIbeCiphertextEntries()) {
+				if (oldestDateToKeep.isBeforeOrEquals(ibeCiphertext.getDayDate())) {
+					shouldDelete = false;
+					break;
+				}
+			}
+			if (shouldDelete) {
 				iterator.remove();
 			}
 		}

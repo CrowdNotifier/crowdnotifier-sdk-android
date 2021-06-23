@@ -5,12 +5,14 @@ public class IBECiphertext {
 	private byte[] c2;
 	private byte[] c3;
 	private byte[] nonce;
+	private DayDate dayDate;
 
-	public IBECiphertext(byte[] c1, byte[] c2, byte[] c3, byte[] nonce) {
+	public IBECiphertext(byte[] c1, byte[] c2, byte[] c3, byte[] nonce, DayDate dayDate) {
 		this.c1 = c1;
 		this.c2 = c2;
 		this.c3 = c3;
 		this.nonce = nonce;
+		this.dayDate = dayDate;
 	}
 
 	public byte[] getC1() {
@@ -27,6 +29,10 @@ public class IBECiphertext {
 
 	public byte[] getNonce() {
 		return nonce;
+	}
+
+	public DayDate getDayDate() {
+		return dayDate;
 	}
 
 }

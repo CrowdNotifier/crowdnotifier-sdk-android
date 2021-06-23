@@ -1,5 +1,7 @@
 package org.crowdnotifier.android.sdk.utils;
 
+import android.util.Log;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -14,9 +16,9 @@ import com.google.crypto.tink.subtle.Hkdf;
 import com.google.gson.Gson;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.goterl.lazycode.lazysodium.LazySodiumAndroid;
-import com.goterl.lazycode.lazysodium.SodiumAndroid;
-import com.goterl.lazycode.lazysodium.interfaces.Box;
+import com.goterl.lazysodium.LazySodiumAndroid;
+import com.goterl.lazysodium.SodiumAndroid;
+import com.goterl.lazysodium.interfaces.Box;
 import com.herumi.mcl.Fr;
 import com.herumi.mcl.G1;
 import com.herumi.mcl.G2;
@@ -24,8 +26,9 @@ import com.herumi.mcl.GT;
 import com.herumi.mcl.Mcl;
 
 import org.crowdnotifier.android.sdk.model.*;
-import org.crowdnotifier.android.sdk.model.v2.ProtoV2;
-import org.crowdnotifier.android.sdk.model.v3.ProtoV3;
+import org.crowdnotifier.android.sdk.model.*;
+
+import static org.crowdnotifier.android.sdk.utils.QrUtils.QR_CODE_VERSION;
 
 /**
  * This class contains all cryptographic calculations, such as encrypting VenueVisits or matching stored encrypted VenueVisits with
@@ -35,7 +38,9 @@ public class CryptoUtils {
 
 	private static final int HASH_BYTES = 32;
 	private static final int NONCE_BYTES = 32;
+	private static final int CRYPTOGRAPHIC_SEED_BYTES = 32;
 
+	private static final int INTERVAL_LENGTH = 3600; //interval length seconds
 
 	private static CryptoUtils instance;
 	private SodiumAndroid sodium;
@@ -60,25 +65,18 @@ public class CryptoUtils {
 
 		ArrayList<IBECiphertext> ibeCiphertextsEntries = new ArrayList<>();
 
-		ArrayList<Integer> hourCounters = getAffectedHours(arrivalTime, departureTime);
-		for (Integer hour : hourCounters) {
+		List<Long> intervalStarts = getAffectedIntervalStarts(arrivalTime / 1000, departureTime / 1000);
+		for (Long intervalStart : intervalStarts) {
 
-			byte[] identity;
-			if (venueInfo.getQrCodePayload() == null) {
-				identity = generateIdentityV2(hour, venueInfo);
-			} else {
-				// getAffectedhours() generates hours since UNIX epoch. As the new format requires these to be in seconds since
-				// UNIX epoch, we multiply by 60 minutes * 60 seconds = 3600.
-				identity = generateIdentityV3(venueInfo.getQrCodePayload(), hour * 3600L, 3600);
-			}
+			byte[] identity = generateIdentity(venueInfo.getQrCodePayload(), intervalStart, INTERVAL_LENGTH);
 
 			byte[] message =
 					(new Gson().toJson(new Payload(arrivalTime, departureTime, venueInfo.getNotificationKey()))).getBytes();
 
-			ibeCiphertextsEntries.add(encryptInternal(masterPublicKey, identity, message));
+			ibeCiphertextsEntries.add(encryptInternal(masterPublicKey, identity, message, intervalStart));
 		}
 
-		return new EncryptedVenueVisit(new DayDate(departureTime), ibeCiphertextsEntries);
+		return new EncryptedVenueVisit(ibeCiphertextsEntries);
 	}
 
 	public List<ExposureEvent> searchAndDecryptMatches(ProblematicEventInfo eventInfo, List<EncryptedVenueVisit> venueVisits) {
@@ -87,38 +85,44 @@ public class CryptoUtils {
 
 		for (EncryptedVenueVisit venueVisit : venueVisits) {
 
-			long venueVisitStart = venueVisit.getDayDate().getStartOfDayTimestamp();
-			long venueVisitEnd = venueVisit.getDayDate().getNextDay().getStartOfDayTimestamp();
-			if (!doIntersect(venueVisitStart, venueVisitEnd, eventInfo.getStartTimestamp(), eventInfo.getEndTimestamp())) continue;
-
 			G1 secretKeyForIdentity = new G1();
 			secretKeyForIdentity.deserialize(eventInfo.getSecretKeyForIdentity());
 
 			for (IBECiphertext ibeCiphertext : venueVisit.getIbeCiphertextEntries()) {
+				long startOfDayLocalEntry = ibeCiphertext.getDayDate().getStartOfDayTimestamp();
+				long endOfDayLocalEntry = ibeCiphertext.getDayDate().getNextDay().getStartOfDayTimestamp();
+				long startOfDayEventInfo = eventInfo.getDayDate().getStartOfDayTimestamp();
+				long endOfDay1EventInfo = eventInfo.getDayDate().getNextDay().getStartOfDayTimestamp();
+				if (!doIntersect(startOfDayLocalEntry, endOfDayLocalEntry, startOfDayEventInfo, endOfDay1EventInfo)) continue;
+
 				byte[] msg_p = decryptInternal(ibeCiphertext, secretKeyForIdentity, eventInfo.getIdentity());
 				if (msg_p == null) continue;
 
 				Payload payload = new Gson().fromJson(new String(msg_p), Payload.class);
 
-				byte[] decryptedMessage =
-						crypto_secretbox_open_easy(payload.getNotificationKey(), eventInfo.getEncryptedAssociatedData(),
-								eventInfo.getCipherTextNonce());
+				byte[] decryptedMessage = crypto_secretbox_open_easy(payload.getNotificationKey(),
+						eventInfo.getEncryptedAssociatedData(), eventInfo.getCipherTextNonce());
 
 				String decryptedMessageString;
-				byte[] countryData = null;
+				byte[] countryData;
+				AssociatedData associatedData;
 				try {
-					ProtoV3.AssociatedData associatedData = ProtoV3.AssociatedData.parseFrom(decryptedMessage);
+					associatedData = AssociatedData.parseFrom(decryptedMessage);
 					decryptedMessageString = associatedData.getMessage();
 					countryData = associatedData.getCountryData().toByteArray();
 				} catch (InvalidProtocolBufferException e) {
-					decryptedMessageString = new String(decryptedMessage);
+					Log.w("CryptoUtils", "Could not parse associated Data");
+					break;
 				}
 
-				ExposureEvent exposureEvent = new ExposureEvent(venueVisit.getId(), payload.getArrivalTime(),
-						payload.getDepartureTime(), decryptedMessageString, countryData);
+				if (doIntersect(payload.getArrivalTime(), payload.getDepartureTime(),
+						associatedData.getStartTimestampSeconds() * 1000L, associatedData.getEndTimestampSeconds() * 1000L)) {
+					ExposureEvent exposureEvent = new ExposureEvent(venueVisit.getId(), payload.getArrivalTime(),
+							payload.getDepartureTime(), decryptedMessageString, countryData);
 
-				exposureEvents.add(exposureEvent);
-				break;
+					exposureEvents.add(exposureEvent);
+					break;
+				}
 			}
 		}
 		return exposureEvents;
@@ -160,9 +164,9 @@ public class CryptoUtils {
 		return msg_p;
 	}
 
-	public IBECiphertext encryptInternal(G2 masterPublicKey, byte[] identity, byte[] message) {
+	public IBECiphertext encryptInternal(G2 masterPublicKey, byte[] identity, byte[] message, long intervalStart) {
 
-		byte[] x = randombytes_buf();
+		byte[] x = getRandomValue(NONCE_BYTES);
 
 		Fr r = new Fr();
 		r.setHashOf(concatenate(x, identity, message));
@@ -182,44 +186,55 @@ public class CryptoUtils {
 		byte[] c2_pair = crypto_hash_sha256(gt_temp.serialize());
 		byte[] c2 = xor(x, c2_pair);
 
-		byte[] nonce = randombytes_buf();
+		byte[] nonce = getRandomValue(NONCE_BYTES);
 
 		byte[] c3 = crypto_secretbox_easy(crypto_hash_sha256(x), message, nonce);
 
-		return new IBECiphertext(c1.serialize(), c2, c3, nonce);
+		return new IBECiphertext(c1.serialize(), c2, c3, nonce, new DayDate(intervalStart * 1000));
 	}
 
-	public byte[] generateIdentityV2(ProtoV2.QRCodeContent qrCodeContent, byte[] nonce1, byte[] nonce2, int hour) {
-		byte[] hash1 = crypto_hash_sha256(concatenate(qrCodeContent.toByteArray(), nonce1));
-		return crypto_hash_sha256(concatenate(hash1, nonce2, String.valueOf(hour).getBytes()));
+	public byte[] generateIdentity(QRCodePayload qrCodePayload, long startOfInterval, int intervalLength) {
+		return generateIdentity(qrCodePayload.toByteArray(), startOfInterval, intervalLength);
 	}
 
-	public byte[] generateIdentityV2(int hour, VenueInfo venueInfo) {
-		byte[] hash1 = crypto_hash_sha256(concatenate(venueInfoToInfoBytes(venueInfo), venueInfo.getNoncePreId()));
-		return crypto_hash_sha256(concatenate(hash1, venueInfo.getNonceTimekey(), String.valueOf(hour).getBytes()));
-	}
-
-	public byte[] generateIdentityV3(ProtoV3.QRCodePayload qrCodePayload, long startOfInterval, int intervalLength) {
-		return generateIdentityV3(qrCodePayload.toByteArray(), startOfInterval, intervalLength);
-	}
-
-	public byte[] generateIdentityV3(byte[] qrCodePayload, long startOfInterval, int intervalLength) {
+	public byte[] generateIdentity(byte[] qrCodePayload, long startOfInterval, int intervalLength) {
 		if (intervalLength < 900 || intervalLength > 86400) {
 			throw new RuntimeException("intervalLength must be between 900 and 86400");
 		}
-		NoncesAndNotificationKey cryptoData = getNoncesAndNotificationKey(qrCodePayload);
 
-		byte[] preid = crypto_hash_sha256(
+		PreIdAndTimeKey preIdAndTimeKey = getPreIdAndTimeKey(qrCodePayload, startOfInterval, intervalLength);
+
+		return crypto_hash_sha256(concatenate("CN-ID".getBytes(StandardCharsets.US_ASCII), preIdAndTimeKey.preId,
+				int32ToBytesBigEndian(intervalLength), int64ToBytesBigEndian(startOfInterval), preIdAndTimeKey.timeKey));
+	}
+
+	private PreIdAndTimeKey getPreIdAndTimeKey(byte[] qrCodePayload, long startOfInterval, int intervalLength) {
+		NoncesAndNotificationKey cryptoData = getNoncesAndNotificationKey(qrCodePayload);
+		byte[] preId = crypto_hash_sha256(
 				concatenate("CN-PREID".getBytes(StandardCharsets.US_ASCII), qrCodePayload, cryptoData.noncePreId));
 
 		byte[] timeKey = crypto_hash_sha256(concatenate("CN-TIMEKEY".getBytes(StandardCharsets.US_ASCII),
 				int32ToBytesBigEndian(intervalLength), int64ToBytesBigEndian(startOfInterval), cryptoData.nonceTimekey));
 
-		return crypto_hash_sha256(concatenate("CN-ID".getBytes(StandardCharsets.US_ASCII), preid,
-				int32ToBytesBigEndian(intervalLength), int64ToBytesBigEndian(startOfInterval), timeKey));
+		return new PreIdAndTimeKey(preId, timeKey);
 	}
 
-	public NoncesAndNotificationKey getNoncesAndNotificationKey(ProtoV3.QRCodePayload qrCodePayload) {
+
+	public List<UserUploadInfo> generateUserUploadPayload(VenueInfo venueInfo, long startTimestamp, long endTimestamp) {
+		NoncesAndNotificationKey cryptoData = getNoncesAndNotificationKey(venueInfo.getQrCodePayload());
+		List<Long> intervalStarts = getAffectedIntervalStarts(startTimestamp / 1000, endTimestamp / 1000);
+		ArrayList<UserUploadInfo> userUploadInfos = new ArrayList<>();
+		for (Long intervalStart : intervalStarts) {
+			PreIdAndTimeKey preIdAndTimeKey = getPreIdAndTimeKey(venueInfo.getQrCodePayload(), intervalStart, INTERVAL_LENGTH);
+
+			userUploadInfos.add(new UserUploadInfo(preIdAndTimeKey.preId, preIdAndTimeKey.timeKey, cryptoData.notificationKey,
+					Math.max(intervalStart * 1000, startTimestamp),
+					Math.min((intervalStart + INTERVAL_LENGTH) * 1000, endTimestamp)));
+		}
+		return userUploadInfos;
+	}
+
+	public NoncesAndNotificationKey getNoncesAndNotificationKey(QRCodePayload qrCodePayload) {
 		return getNoncesAndNotificationKey(qrCodePayload.toByteArray());
 	}
 
@@ -233,6 +248,40 @@ public class CryptoUtils {
 			return new NoncesAndNotificationKey(noncePreId, nonceTimekey, notificationKey);
 		} catch (GeneralSecurityException e) {
 			throw new RuntimeException("HKDF threw GeneralSecurityException");
+		}
+	}
+
+	/**
+	 * Generates Base64 encoded String of an Entry QR Code
+	 */
+	public VenueInfo generateEntryQrCode(String description, String address, byte[] countryData, long validFrom, long validTo,
+			byte[] masterPublicKey) {
+
+		TraceLocation traceLocation = TraceLocation.newBuilder()
+				.setVersion(QR_CODE_VERSION)
+				.setStartTimestamp(validFrom)
+				.setEndTimestamp(validTo)
+				.setDescription(description)
+				.setAddress(address)
+				.build();
+
+		CrowdNotifierData crowdNotifierData = CrowdNotifierData.newBuilder()
+				.setVersion(QR_CODE_VERSION)
+				.setCryptographicSeed(ByteString.copyFrom(getRandomValue(CRYPTOGRAPHIC_SEED_BYTES)))
+				.setPublicKey(ByteString.copyFrom(masterPublicKey))
+				.build();
+
+		QRCodePayload qrCodePayload = QRCodePayload.newBuilder()
+				.setVersion(QR_CODE_VERSION)
+				.setCrowdNotifierData(crowdNotifierData)
+				.setLocationData(traceLocation)
+				.setCountryData(ByteString.copyFrom(countryData))
+				.build();
+
+		try {
+			return QrUtils.getVenueInfoFromQrCode(Base64Util.toBase64(qrCodePayload.toByteArray()));
+		} catch (QrUtils.InvalidQRCodeFormatException e) {
+			throw new RuntimeException(e);
 		}
 	}
 
@@ -273,9 +322,9 @@ public class CryptoUtils {
 		return c;
 	}
 
-	private byte[] randombytes_buf() {
-		byte[] nonce = new byte[NONCE_BYTES];
-		sodium.randombytes_buf(nonce, NONCE_BYTES);
+	public byte[] getRandomValue(int bytes) {
+		byte[] nonce = new byte[bytes];
+		sodium.randombytes_buf(nonce, nonce.length);
 		return nonce;
 	}
 
@@ -287,36 +336,19 @@ public class CryptoUtils {
 	}
 
 	/**
-	 * @return a List of Integers containing all hours since UNIX epoch that intersect with the (arrivalTime, departureTime)
-	 * interval.
+	 * @param arrivalTime time since Unix Epoch in seconds
+	 * @param departureTime time since Unix Epoch in seconds
+	 * @return a List of Long containing all intervalStart values since UNIX epoch (in seconds) that intersect with the
+	 * (arrivalTime, departureTime) interval.
 	 */
-	public ArrayList<Integer> getAffectedHours(long arrivalTime, long departureTime) {
-		long ONE_HOUR_IN_MILLISECONDS = 1000L * 60 * 60;
-		long startHour = arrivalTime / ONE_HOUR_IN_MILLISECONDS;
-		long endHour = departureTime / ONE_HOUR_IN_MILLISECONDS;
-		ArrayList<Integer> result = new ArrayList<>();
-		for (int i = (int) startHour; i <= endHour; i++) {
-			result.add(i);
+	public List<Long> getAffectedIntervalStarts(long arrivalTime, long departureTime) {
+		long start = arrivalTime / INTERVAL_LENGTH;
+		long end = departureTime / INTERVAL_LENGTH;
+		ArrayList<Long> result = new ArrayList<>();
+		for (long i = start; i <= end; i += 1) {
+			result.add(i * INTERVAL_LENGTH);
 		}
 		return result;
-	}
-
-	private byte[] venueInfoToInfoBytes(VenueInfo venueInfo) {
-		try {
-			ProtoV3.NotifyMeLocationData notifyMeLocationData = ProtoV3.NotifyMeLocationData.parseFrom(venueInfo.getCountryData());
-			ProtoV2.QRCodeContent qrCodeContent = ProtoV2.QRCodeContent.newBuilder()
-					.setName(venueInfo.getDescription())
-					.setLocation(venueInfo.getAddress())
-					.setRoom(notifyMeLocationData.getRoom())
-					.setVenueTypeValue(notifyMeLocationData.getType().getNumber())
-					.setNotificationKey(ByteString.copyFrom(venueInfo.getNotificationKey()))
-					.setValidFrom(venueInfo.getValidFrom())
-					.setValidTo(venueInfo.getValidTo())
-					.build();
-			return qrCodeContent.toByteArray();
-		} catch (InvalidProtocolBufferException e) {
-			throw new RuntimeException("VenueInfo CountryData contained invalid Bytes");
-		}
 	}
 
 	private byte[] concatenate(byte[]... byteArrays) {
@@ -356,6 +388,18 @@ public class CryptoUtils {
 			this.noncePreId = noncePreId;
 			this.nonceTimekey = nonceTimekey;
 			this.notificationKey = notificationKey;
+		}
+
+	}
+
+
+	private class PreIdAndTimeKey {
+		public final byte[] preId;
+		public final byte[] timeKey;
+
+		public PreIdAndTimeKey(byte[] preId, byte[] timeKey) {
+			this.preId = preId;
+			this.timeKey = timeKey;
 		}
 
 	}

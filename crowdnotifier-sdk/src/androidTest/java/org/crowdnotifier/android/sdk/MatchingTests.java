@@ -10,16 +10,15 @@ import java.util.List;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.goterl.lazycode.lazysodium.LazySodiumAndroid;
-import com.goterl.lazycode.lazysodium.SodiumAndroid;
-import com.goterl.lazycode.lazysodium.interfaces.Box;
+import com.goterl.lazysodium.LazySodiumAndroid;
+import com.goterl.lazysodium.SodiumAndroid;
+import com.goterl.lazysodium.interfaces.Box;
 import com.herumi.mcl.Fr;
 import com.herumi.mcl.G1;
 import com.herumi.mcl.G2;
 import com.herumi.mcl.Mcl;
 
 import org.crowdnotifier.android.sdk.model.*;
-import org.crowdnotifier.android.sdk.model.v3.ProtoV3;
 import org.crowdnotifier.android.sdk.storage.ExposureStorage;
 import org.crowdnotifier.android.sdk.storage.VenueVisitStorage;
 import org.crowdnotifier.android.sdk.utils.Base64Util;
@@ -37,7 +36,7 @@ import static org.junit.Assert.assertEquals;
  * computations that are normally done in the Backend.
  */
 @RunWith(AndroidJUnit4.class)
-public class MatchingV3Tests {
+public class MatchingTests {
 
 	private Context context;
 	private SodiumAndroid sodium;
@@ -45,7 +44,7 @@ public class MatchingV3Tests {
 	KeyPair haKeyPair;
 	private static final long ONE_HOUR_IN_SECONDS = 60 * 60;
 	private static final long ONE_DAY_IN_SECONDS = 24 * ONE_HOUR_IN_SECONDS;
-	private static final int QR_CODE_VERSION = 3;
+	private static final int QR_CODE_VERSION = 4;
 
 
 	/**
@@ -71,7 +70,8 @@ public class MatchingV3Tests {
 
 
 	/**
-	 * This tests a full cycle of the CrowdNotifier protocol, from setting up the location owner, adding a User-Check-In to the SDK,
+	 * This tests a full cycle of the CrowdNotifier protocol, from setting up the location owner, adding a User-Check-In to the
+	 * SDK,
 	 * simulating the generation of a List of PreTrace Protobuf objects followed by the creation of the corresponding Trace
 	 * Protobuf objects as well as the ProblematicEventInfo objects, which are then successfully matched against the Check-In made
 	 * by the user, by calling the checkForMatches function of the SDK. After the successful match, the checkForMatches function
@@ -86,7 +86,7 @@ public class MatchingV3Tests {
 		long exposureStart = currentTime - ONE_HOUR_IN_SECONDS;
 		long exposureEnd = currentTime;
 		String exposureMessage = "This is a message.";
-		byte[] countryData = getRandomValue(200);
+		byte[] countryData = cryptoUtils.getRandomValue(200);
 
 		// Sets up location owner, adds User-Check-In, generates PreTraces and Traces and returns a list of ProblematicEventInfos
 		List<ProblematicEventInfo> publishedSKs =
@@ -116,7 +116,7 @@ public class MatchingV3Tests {
 		long exposureStart = currentTime - 2 * ONE_HOUR_IN_SECONDS;
 		long exposureEnd = currentTime - ONE_HOUR_IN_SECONDS - 1;
 		String exposureMessage = "This is a message.";
-		byte[] countryData = getRandomValue(200);
+		byte[] countryData = cryptoUtils.getRandomValue(200);
 
 		// Sets up location owner, adds User-Check-In, generates PreTraces and Traces and returns a list of ProblematicEventInfos
 		List<ProblematicEventInfo> publishedSKs =
@@ -135,45 +135,43 @@ public class MatchingV3Tests {
 		long currentTime = System.currentTimeMillis() / 1000;
 
 		//Setup Location Owner
-		byte[] cryptographicSeed = getRandomValue(32);
-
 		long qrCodeValidFrom = currentTime - ONE_DAY_IN_SECONDS;
 		long qrCodeValidTo = currentTime + ONE_DAY_IN_SECONDS;
-		Location location = new Location(haKeyPair.publicKey, ProtoV3.VenueType.OTHER, "Name", "Location",
-				"Room", cryptographicSeed, qrCodeValidFrom, qrCodeValidTo);
+		byte[] locationData = cryptoUtils.getRandomValue(300);
+		Location location = new Location(haKeyPair.publicKey, "Name", "Location", qrCodeValidFrom, qrCodeValidTo, locationData);
 
-		ProtoV3.QRCodeTrace qrTrace = location.qrCodeTrace;
-		ProtoV3.QRCodePayload qrEntry = location.qrCodePayload;
+		QRCodeTrace qrTrace = location.qrCodeTrace;
+		QRCodePayload qrEntry = location.qrCodePayload;
 
 		//User checks in with App
 		String urlPrefix = "https://test.com";
+		String host = "test.com";
 		VenueInfo venueInfo = CrowdNotifier.getVenueInfo(urlPrefix + "?v=" + QR_CODE_VERSION + "#"
-				+ Base64Util.toBase64(qrEntry.toByteArray()), urlPrefix);
+				+ Base64Util.toBase64(qrEntry.toByteArray()), host);
 
 		CrowdNotifier.addCheckIn(arrivalTime, departureTime, venueInfo, context);
 
 		//Venue Owner Creates PreTraces
-		List<ProtoV3.PreTraceWithProof> preTraceWithProofList =
-				createPreTrace(qrTrace, exposureStart, exposureEnd);
+		List<PreTraceWithProof> preTraceWithProofList = createPreTrace(qrTrace, exposureStart, exposureEnd);
 
 		//Health Authority generates Traces
 		List<ProblematicEventInfo> publishedSKs = new ArrayList<>();
-		for (ProtoV3.PreTraceWithProof preTraceWithProof : preTraceWithProofList) {
-			ProtoV3.Trace trace = createTrace(preTraceWithProof, haKeyPair, message, countryData);
+		for (PreTraceWithProof preTraceWithProof : preTraceWithProofList) {
+			Trace trace = createTrace(preTraceWithProof, haKeyPair, message, countryData);
 
 			publishedSKs.add(new ProblematicEventInfo(trace.getIdentity().toByteArray(),
-					trace.getSecretKeyForIdentity().toByteArray(), trace.getStartTime(), trace.getEndTime(),
-					trace.getEncryptedAssociatedData().toByteArray(), trace.getNonce().toByteArray()));
+					trace.getSecretKeyForIdentity().toByteArray(), trace.getEncryptedAssociatedData().toByteArray(),
+					trace.getNonce().toByteArray(), new DayDate(trace.getStartOfDayTimestamp())));
 		}
 		return publishedSKs;
 	}
 
 
-	private ProtoV3.Trace createTrace(ProtoV3.PreTraceWithProof preTraceWithProof, KeyPair haKeyPair, String message,
+	private Trace createTrace(PreTraceWithProof preTraceWithProof, KeyPair haKeyPair, String message,
 			byte[] countryData) throws InvalidProtocolBufferException {
 
-		ProtoV3.PreTrace preTrace = preTraceWithProof.getPreTrace();
-		ProtoV3.TraceProof proof = preTraceWithProof.getProof();
+		PreTrace preTrace = preTraceWithProof.getPreTrace();
+		TraceProof proof = preTraceWithProof.getProof();
 
 		byte[] ctxha = preTrace.getCipherTextHealthAuthority().toByteArray();
 		byte[] mskh_raw = new byte[ctxha.length - Box.SEALBYTES];
@@ -190,39 +188,38 @@ public class MatchingV3Tests {
 		G1 secretKeyForIdentity = new G1();
 		Mcl.add(secretKeyForIdentity, partialSecretKeyForIdentityOfLocation, partialSecretKeyForIdentityOfHealthAuthority);
 
-		ProtoV3.QRCodePayload qrCodePayload = ProtoV3.QRCodePayload.parseFrom(preTraceWithProof.getQrCodePayload());
-		byte[] identity = cryptoUtils.generateIdentityV3(qrCodePayload, preTraceWithProof.getStartOfInterval(), 3600);
+		QRCodePayload qrCodePayload = QRCodePayload.parseFrom(preTraceWithProof.getQrCodePayload());
+		byte[] identity = cryptoUtils.generateIdentity(qrCodePayload, preTraceWithProof.getStartOfInterval(), 3600);
 		if (!Arrays.equals(preTrace.getIdentity().toByteArray(), identity)) {
 			return null;
 		}
 
 		//verifyTrace
 		int NONCE_LENGTH = 32;
-		byte[] msg_orig = getRandomValue(NONCE_LENGTH);
+		byte[] msg_orig = cryptoUtils.getRandomValue(NONCE_LENGTH);
 		G2 masterPublicKey = new G2();
 		masterPublicKey.deserialize(proof.getMasterPublicKey().toByteArray());
-		IBECiphertext ibeCiphertext = cryptoUtils.encryptInternal(masterPublicKey, identity, msg_orig);
+		IBECiphertext ibeCiphertext = cryptoUtils.encryptInternal(masterPublicKey, identity, msg_orig, 0);
 		byte[] msg_dec = cryptoUtils.decryptInternal(ibeCiphertext, secretKeyForIdentity, identity);
 		if (msg_dec == null) throw new RuntimeException("Health Authority could not verify Trace");
 
-		byte[] nonce = getRandomValue(Box.NONCEBYTES);
+		byte[] nonce = cryptoUtils.getRandomValue(Box.NONCEBYTES);
 		byte[] encryptedAssociatedData = encryptAssociatedData(preTraceWithProof.getPreTrace().getNotificationKey().toByteArray(),
-				message, countryData, nonce);
+				message, countryData, nonce, preTraceWithProof.getStartTime(), preTraceWithProof.getEndTime());
 
-		return ProtoV3.Trace.newBuilder()
+		return Trace.newBuilder()
 				.setIdentity(preTrace.getIdentity())
 				.setSecretKeyForIdentity(ByteString.copyFrom(secretKeyForIdentity.serialize()))
-				.setStartTime(preTraceWithProof.getStartTime())
-				.setEndTime(preTraceWithProof.getEndTime())
+				.setStartOfDayTimestamp(new DayDate(preTraceWithProof.getStartTime()).getStartOfDayTimestamp())
 				.setNonce(ByteString.copyFrom(nonce))
 				.setEncryptedAssociatedData(ByteString.copyFrom(encryptedAssociatedData))
 				.build();
 	}
 
-	private List<ProtoV3.PreTraceWithProof> createPreTrace(ProtoV3.QRCodeTrace qrCodeTrace, long startTime, long endTime)
+	private List<PreTraceWithProof> createPreTrace(QRCodeTrace qrCodeTrace, long startTime, long endTime)
 			throws InvalidProtocolBufferException {
 
-		ProtoV3.QRCodePayload qrCodePayload = ProtoV3.QRCodePayload.parseFrom(qrCodeTrace.getQrCodePayload());
+		QRCodePayload qrCodePayload = QRCodePayload.parseFrom(qrCodeTrace.getQrCodePayload());
 
 		G2 masterPublicKey = new G2();
 		masterPublicKey.deserialize(qrCodePayload.getCrowdNotifierData().getPublicKey().toByteArray());
@@ -232,17 +229,15 @@ public class MatchingV3Tests {
 
 		CryptoUtils.NoncesAndNotificationKey cryptoData = cryptoUtils.getNoncesAndNotificationKey(qrCodePayload);
 
-		ArrayList<ProtoV3.PreTraceWithProof> preTraceWithProofsList = new ArrayList<>();
-		ArrayList<Integer> affectedHours = cryptoUtils.getAffectedHours(startTime, endTime);
-		for (Integer hour : affectedHours) {
+		ArrayList<PreTraceWithProof> preTraceWithProofsList = new ArrayList<>();
+		List<Long> intervalStarts = cryptoUtils.getAffectedIntervalStarts(startTime / 1000, endTime / 1000);
+		for (Long intervalStart : intervalStarts) {
 
-			long startOfInterval = hour * 3600;
-
-			byte[] identity = cryptoUtils.generateIdentityV3(qrCodePayload, startOfInterval, 3600);
+			byte[] identity = cryptoUtils.generateIdentity(qrCodePayload, intervalStart, 3600);
 
 			G1 partialSecretKeyForIdentityOfLocation = keyDer(masterSecretKeyLocation, identity);
 
-			ProtoV3.PreTrace preTrace = ProtoV3.PreTrace.newBuilder()
+			PreTrace preTrace = PreTrace.newBuilder()
 					.setIdentity(ByteString.copyFrom(identity))
 					.setCipherTextHealthAuthority(qrCodeTrace.getCipherTextHealthAuthority())
 					.setPartialSecretKeyForIdentityOfLocation(
@@ -250,19 +245,19 @@ public class MatchingV3Tests {
 					.setNotificationKey(ByteString.copyFrom(cryptoData.notificationKey))
 					.build();
 
-			ProtoV3.TraceProof traceProof = ProtoV3.TraceProof.newBuilder()
+			TraceProof traceProof = TraceProof.newBuilder()
 					.setMasterPublicKey(qrCodePayload.getCrowdNotifierData().getPublicKey())
 					.setNoncePreId(ByteString.copyFrom(cryptoData.noncePreId))
 					.setNonceTimekey(ByteString.copyFrom(cryptoData.nonceTimekey))
 					.build();
 
-			ProtoV3.PreTraceWithProof preTraceWithProof = ProtoV3.PreTraceWithProof.newBuilder()
+			PreTraceWithProof preTraceWithProof = PreTraceWithProof.newBuilder()
 					.setPreTrace(preTrace)
 					.setProof(traceProof)
 					.setQrCodePayload(qrCodeTrace.getQrCodePayload())
 					.setStartTime(startTime)
 					.setEndTime(endTime)
-					.setStartOfInterval(startOfInterval)
+					.setStartOfInterval(intervalStart)
 					.build();
 			preTraceWithProofsList.add(preTraceWithProof);
 		}
@@ -285,17 +280,14 @@ public class MatchingV3Tests {
 		return new KeyPair(publicKey, privateKey);
 	}
 
-	private byte[] getRandomValue(int bytes) {
-		byte[] nonce = new byte[bytes];
-		sodium.randombytes_buf(nonce, nonce.length);
-		return nonce;
-	}
-
-	private byte[] encryptAssociatedData(byte[] secretKey, String message, byte[] countryData, byte[] nonce) {
-		ProtoV3.AssociatedData associatedData = ProtoV3.AssociatedData.newBuilder()
+	private byte[] encryptAssociatedData(byte[] secretKey, String message, byte[] countryData, byte[] nonce, long startTimestampMs,
+			long endTimestampMs) {
+		AssociatedData associatedData = AssociatedData.newBuilder()
 				.setMessage(message)
 				.setCountryData(ByteString.copyFrom(countryData))
 				.setVersion(QR_CODE_VERSION)
+				.setStartTimestampSeconds(startTimestampMs / 1000L)
+				.setEndTimestampSeconds(endTimestampMs / 1000L)
 				.build();
 
 		byte[] messageBytes = associatedData.toByteArray();
@@ -342,49 +334,31 @@ public class MatchingV3Tests {
 	 * QR Codes (qrCodePayload and qrCodeTrace).
 	 */
 	private class Location {
-		ProtoV3.QRCodePayload qrCodePayload;
-		ProtoV3.QRCodeTrace qrCodeTrace;
+		QRCodePayload qrCodePayload;
+		QRCodeTrace qrCodeTrace;
 
-		public Location(byte[] healthAuthorityPublicKey, ProtoV3.VenueType venueType, String name, String location,
-				String room, byte[] cryptographicSeed, long validFrom, long validTo) {
-
-			ProtoV3.TraceLocation traceLocation = ProtoV3.TraceLocation.newBuilder()
-					.setVersion(QR_CODE_VERSION)
-					.setStartTimestamp(validFrom)
-					.setEndTimestamp(validTo)
-					.setDescription(name)
-					.setAddress(location)
-					.build();
+		public Location(byte[] healthAuthorityPublicKey, String description, String address, long validFrom, long validTo,
+				byte[] countryData) {
 
 			KeyPairMcl locationKeyPair = keyGen();
 			KeyPairMcl haKeyPair = keyGen();
 			G2 masterPublicKey = new G2();
 			Mcl.add(masterPublicKey, locationKeyPair.publicKey, haKeyPair.publicKey);
 
-			ProtoV3.CrowdNotifierData crowdNotifierData = ProtoV3.CrowdNotifierData.newBuilder()
-					.setVersion(QR_CODE_VERSION)
-					.setCryptographicSeed(ByteString.copyFrom(cryptographicSeed))
-					.setPublicKey(ByteString.copyFrom(masterPublicKey.serialize()))
-					.build();
+			String qrEntryQRCodeBase64String = cryptoUtils.generateEntryQrCode(description, address, countryData, validFrom,
+					validTo, masterPublicKey.serialize()).toQrCodeString("test.com");
 
-			ProtoV3.NotifyMeLocationData countryData = ProtoV3.NotifyMeLocationData.newBuilder()
-					.setVersion(QR_CODE_VERSION)
-					.setRoom(room)
-					.setType(venueType)
-					.build();
-
-			this.qrCodePayload = ProtoV3.QRCodePayload.newBuilder()
-					.setVersion(QR_CODE_VERSION)
-					.setCrowdNotifierData(crowdNotifierData)
-					.setLocationData(traceLocation)
-					.setCountryData(countryData.toByteString())
-					.build();
-
+			try {
+				this.qrCodePayload =
+						QRCodePayload.parseFrom(CrowdNotifier.getVenueInfo(qrEntryQRCodeBase64String, "test.com").getQrCodePayload());
+			} catch (InvalidProtocolBufferException | QrUtils.QRException e) {
+				throw new RuntimeException("Could not decode generated QRCodePayload");
+			}
 			byte[] cipherTextHealthAuthority = new byte[haKeyPair.privateKey.serialize().length + Box.SEALBYTES];
 			sodium.crypto_box_seal(cipherTextHealthAuthority, haKeyPair.privateKey.serialize(),
 					haKeyPair.privateKey.serialize().length, healthAuthorityPublicKey);
 
-			this.qrCodeTrace = ProtoV3.QRCodeTrace.newBuilder()
+			this.qrCodeTrace = QRCodeTrace.newBuilder()
 					.setVersion(QR_CODE_VERSION)
 					.setQrCodePayload(qrCodePayload.toByteString())
 					.setMasterSecretKeyLocation(ByteString.copyFrom(locationKeyPair.privateKey.serialize()))
